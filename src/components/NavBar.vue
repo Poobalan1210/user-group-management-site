@@ -16,7 +16,7 @@ const toggleMobileMenu = () => {
       <!-- Logo -->
       <div class="flex items-center">
         <img
-          src="../assets/chapter-badge-light.png"
+          src="../assets/Chapter-badge-light.png"
           alt="Chapter Badge"
           class="h-16 md:h-20"
         />
