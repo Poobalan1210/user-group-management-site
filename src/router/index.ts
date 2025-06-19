@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Events from '../views/Events.vue'
 import Admin from '../views/Admin.vue'
+import Profile from '../views/Profile.vue'
 
 const routes = [
   {
@@ -21,6 +22,12 @@ const routes = [
     name: 'Admin',
     component: Admin,
     meta: { title: 'Admin' }
+  },
+  {
+    path: '/profile/:id',
+    name: 'Profile',
+    component: Profile,
+    meta: { title: 'User Profile' }
   }
 ]
 

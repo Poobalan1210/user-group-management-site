@@ -31,6 +31,7 @@ export type FormSubmission = {
   name: string;
   email: string;
   event: string;
+  type: 'Article' | 'Project' | 'Challenge' | 'Workshop';
   date: string;
   content: string;
   link: string;

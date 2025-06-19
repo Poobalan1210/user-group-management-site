@@ -62,7 +62,7 @@ const columns: TableColumn<Participant>[] = [
         size: "xs",
         icon: "i-lucide-external-link",
         label: "View Profile",
-        onClick: () => window.open(row.getValue("profileUrl"), '_blank'),
+        onClick: () => window.open(`/profile/${row.original.id}`, '_blank'),
       });
     },
   },
@@ -140,8 +140,6 @@ const detailColumns: TableColumn<Submission>[] = [
         :ui="{
           tr: 'data-[expanded=true]:bg-(--ui-bg-elevated)/50',
           base: 'overflow-hidden border-2 border-gray-300 dark:border-gray-700 rounded-lg shadow',
-          wrapper: 'ring-1 ring-gray-300 dark:ring-gray-700 rounded-lg',
-          table: 'min-w-full divide-y divide-gray-200 dark:divide-gray-700',
           thead: 'bg-gray-50 dark:bg-gray-800',
           th: 'border-b border-gray-200 dark:border-gray-700 text-lg',
           td: 'border-b border-gray-200 dark:border-gray-700 text-lg',
@@ -154,8 +152,7 @@ const detailColumns: TableColumn<Submission>[] = [
               :columns="detailColumns"
               :data="getDetailData(row.original)"
               :ui="{
-                wrapper: 'border-0 shadow-none',
-                table: 'min-w-full divide-y divide-gray-200',
+                base: 'border-0 shadow-none',
                 thead: 'bg-gray-50 dark:bg-gray-800',
                 th: 'px-3 py-2 text-sm',
                 td: 'px-3 py-2 text-sm',
