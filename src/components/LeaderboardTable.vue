@@ -62,7 +62,7 @@ const columns: TableColumn<Participant>[] = [
         size: "xs",
         icon: "i-lucide-external-link",
         label: "View Profile",
-        onClick: () => window.open(`/profile/${row.original.id}`, '_blank'),
+        to: `/profile/${row.original.id}`,
       });
     },
   },
