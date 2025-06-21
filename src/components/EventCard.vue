@@ -6,6 +6,10 @@ const props = defineProps<{
   event: Event;
 }>();
 
+const emit = defineEmits<{
+  (e: 'edit', event: Event): void;
+}>();
+
 const isExpanded = ref(false);
 const showResources = ref(false);
 const showChallengeForm = ref(false);
@@ -18,16 +22,22 @@ const toggleExpand = () => {
     showChallengeForm.value = false;
     activeCheckpoint.value = null;
   }
+  // Ensure scrolling is always enabled
+  document.body.style.overflow = "";
 };
 
 const toggleResources = (e: MouseEvent) => {
   e.stopPropagation();
   showResources.value = !showResources.value;
+  // Ensure scrolling is always enabled
+  document.body.style.overflow = "";
 };
 
 const toggleChallengeForm = (e: MouseEvent) => {
   e.stopPropagation();
   showChallengeForm.value = !showChallengeForm.value;
+  // Ensure scrolling is always enabled
+  document.body.style.overflow = "";
 };
 
 const toggleCheckpointDetails = (index: number, e: MouseEvent) => {
@@ -37,6 +47,15 @@ const toggleCheckpointDetails = (index: number, e: MouseEvent) => {
   } else {
     activeCheckpoint.value = index;
   }
+  // Ensure scrolling is always enabled
+  document.body.style.overflow = "";
+};
+
+const handleEdit = (e: MouseEvent) => {
+  e.stopPropagation();
+  // Ensure scrolling is always enabled before emitting edit event
+  document.body.style.overflow = "";
+  emit('edit', props.event);
 };
 
 const formatDate = (dateString: string) => {
@@ -73,13 +92,21 @@ const sortedCheckpoints = computed(() => {
         <div>
           <h3 class="text-lg font-semibold">{{ event.title }}</h3>
           <div class="flex items-center gap-2 mt-1">
-            <UBadge color="primary" size="sm">
+            <UBadge :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'" size="sm">
               {{ event.eventType === 'builders_skill_sprint' ? 'Builders Skill Sprint' : 'Virtual Event' }}
             </UBadge>
             <p class="text-sm text-gray-500">{{ formatMonthYear(event.date) }}</p>
           </div>
         </div>
-        <div class="flex items-center">
+        <div class="flex items-center gap-2">
+          <UButton
+            size="xs"
+            :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
+            variant="ghost"
+            icon="i-heroicons-pencil-square"
+            @click.stop="handleEdit"
+            class="mr-2"
+          />
           <UIcon
             :name="isExpanded ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
             class="text-gray-500"
@@ -88,7 +115,7 @@ const sortedCheckpoints = computed(() => {
       </div>
     </UCardHeader>
 
-    <div v-if = "isExpanded">
+    <div v-if="isExpanded">
       <UCardBody>
         <p class="mb-4">{{ event.description }}</p>
         
@@ -105,18 +132,43 @@ const sortedCheckpoints = computed(() => {
           </div>
         </div>
         
-        <!-- Meetup Link -->
-        <div v-if="event.meetupLink" class="mb-6">
+        <!-- Meetup Link - Only for Virtual Events -->
+        <div v-if="event.eventType === 'virtual_event' && event.meetupLink" class="mb-6">
           <UButton
             size="sm"
-            color="primary"
+            color="info"
             variant="outline"
             :to="event.meetupLink"
             target="_blank"
             icon="i-heroicons-user-group"
           >
-            Main Meetup Event
+            Join Meetup
           </UButton>
+        </div>
+
+        <!-- Virtual Event Media -->
+        <div v-if="event.eventType === 'virtual_event' && event.checkpoints && event.checkpoints.length > 0" class="mb-6">
+          <div class="media-container mb-4">
+            <!-- Poster Image -->
+            <div v-if="event.checkpoints[0].posterImage" class="aspect-video overflow-hidden">
+              <img 
+                :src="event.checkpoints[0].posterImage" 
+                :alt="`Poster for ${event.title}`"
+                class="w-full h-full object-contain rounded-lg shadow-sm"
+              />
+            </div>
+            
+            <!-- YouTube Video Embed -->
+            <div v-if="event.checkpoints[0].youtubeVideoId" class="aspect-video">
+              <iframe
+                class="w-full h-full rounded-lg"
+                :src="`https://www.youtube.com/embed/${event.checkpoints[0].youtubeVideoId}`"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          </div>
         </div>
         
         <!-- Checkpoints Section - Only for Builders Skill Sprint -->
@@ -259,7 +311,7 @@ const sortedCheckpoints = computed(() => {
                     </div>
                     <UButton
                       size="xs"
-                      color="primary"
+                      :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
                       :to="resource.link"
                       target="_blank"
                     >

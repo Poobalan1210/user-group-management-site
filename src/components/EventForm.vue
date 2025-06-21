@@ -1,15 +1,56 @@
 <script setup lang="ts">
-import { ref, reactive, watch } from "vue";
+import { ref, reactive, watch, computed, onUnmounted } from "vue";
 import type { Checkpoint, Resource, Event } from "../data/events";
 
 const props = defineProps<{
   isOpen: boolean;
+  defaultEventType?: 'builders_skill_sprint' | 'virtual_event';
+  eventToEdit?: Event;
 }>();
 
 const emit = defineEmits<{
   (e: "event-created", event: Event): void;
+  (e: "event-updated", event: Event): void;
   (e: "cancel"): void;
 }>();
+
+// Check if we're in edit mode
+const isEditMode = computed(() => !!props.eventToEdit);
+
+// Initialize the form with the event to edit or with default values
+const initializeForm = () => {
+  if (props.eventToEdit) {
+    // Clone the event to edit
+    return {
+      title: props.eventToEdit.title,
+      description: props.eventToEdit.description,
+      status: props.eventToEdit.status,
+      date: props.eventToEdit.date,
+      eventType: props.eventToEdit.eventType,
+      tags: [...(props.eventToEdit.tags || [])],
+      challengeFormLink: props.eventToEdit.challengeFormLink || "",
+      meetupLink: props.eventToEdit.meetupLink || "",
+      checkpoints: props.eventToEdit.checkpoints.map(cp => ({ ...cp })),
+      resources: props.eventToEdit.resources.map(res => ({ ...res })),
+    } as Omit<Event, "id">;
+  }
+  
+  // Default values for new event
+  return {
+    title: "",
+    description: "",
+    status: "live" as const,
+    date: new Date().toISOString().split("T")[0],
+    eventType: (props.defaultEventType || "builders_skill_sprint") as "builders_skill_sprint" | "virtual_event",
+    tags: [],
+    challengeFormLink: "",
+    meetupLink: "",
+    checkpoints: [],
+    resources: [],
+  } as Omit<Event, "id">;
+};
+
+const newEvent = reactive<Omit<Event, "id">>(initializeForm());
 
 // Watch for changes to isOpen prop
 watch(
@@ -17,23 +58,23 @@ watch(
   (newVal) => {
     if (newVal) {
       document.body.style.overflow = "hidden"; // Prevent scrolling when modal is open
+      
+      // Reset form when opening
+      const formValues = initializeForm();
+      Object.keys(formValues).forEach(key => {
+        // @ts-ignore
+        newEvent[key] = formValues[key];
+      });
     } else {
       document.body.style.overflow = ""; // Restore scrolling when modal is closed
     }
-  }
+  },
+  { immediate: true } // Run immediately to ensure proper initial state
 );
 
-const newEvent = reactive<Omit<Event, "id">>({
-  title: "",
-  description: "",
-  status: "live",
-  date: new Date().toISOString().split("T")[0],
-  eventType: "builders_skill_sprint",
-  tags: [],
-  challengeFormLink: "",
-  meetupLink: "",
-  checkpoints: [],
-  resources: [],
+// Make sure scrolling is restored when component is unmounted
+onUnmounted(() => {
+  document.body.style.overflow = ""; // Restore scrolling
 });
 
 const newCheckpoint = reactive<Checkpoint>({
@@ -61,11 +102,6 @@ const tagOptions = [
   { label: "DevOps", value: "devops" },
   { label: "Machine Learning", value: "ml" },
   { label: "Blockchain", value: "blockchain" },
-];
-
-const eventTypeOptions = [
-  { label: "Builders Skill Sprint", value: "builders_skill_sprint" },
-  { label: "Virtual Event", value: "virtual_event" },
 ];
 
 const resourceTypeOptions = [
@@ -113,6 +149,11 @@ watch(
   }
 );
 
+// Helper computed property for button color based on event type
+const buttonColor = computed(() => {
+  return newEvent.eventType === 'virtual_event' ? 'info' : 'primary';
+});
+
 const addCheckpoint = () => {
   if (newCheckpoint.title && newCheckpoint.description) {
     newEvent.checkpoints.push({ ...newCheckpoint });
@@ -146,20 +187,33 @@ const removeResource = (index: number) => {
 
 const submitForm = () => {
   if (newEvent.title && newEvent.description && newEvent.date) {
-    const createdEvent: Event = {
-      ...newEvent,
-      id: Date.now().toString(),
-    };
-
-    emit("event-created", createdEvent);
+    if (isEditMode.value) {
+      // Update existing event
+      const updatedEvent: Event = {
+        ...props.eventToEdit!,
+        ...newEvent,
+      };
+      document.body.style.overflow = ""; // Restore scrolling before emitting
+      emit("event-updated", updatedEvent);
+    } else {
+      // Create new event
+      const createdEvent: Event = {
+        ...newEvent,
+        id: Date.now().toString(),
+      };
+      document.body.style.overflow = ""; // Restore scrolling before emitting
+      emit("event-created", createdEvent);
+    }
   }
 };
 
 const cancel = () => {
+  document.body.style.overflow = ""; // Ensure scrolling is restored
   emit("cancel");
 };
 
 const handleModalClose = () => {
+  document.body.style.overflow = ""; // Ensure scrolling is restored
   emit("cancel");
 };
 </script>
@@ -169,7 +223,7 @@ const handleModalClose = () => {
     :open="isOpen"
     @update:open="handleModalClose"
     :close="{ onClick: cancel }"
-    title="Create New Event"
+    :title="isEditMode ? `Edit ${newEvent.eventType === 'virtual_event' ? 'Virtual Event' : 'Skill Sprint'}` : `Create ${newEvent.eventType === 'virtual_event' ? 'Virtual Event' : 'Skill Sprint'}`"
   >
     <template #body>
       <div class="p-4 bg-dark text-white max-h-[70vh] overflow-y-auto">
@@ -177,13 +231,6 @@ const handleModalClose = () => {
           <!-- Basic Event Info -->
           <div class="space-y-8 mb-8">
             <UForm :state="newEvent">
-              <USelect
-                v-model="newEvent.eventType"
-                :items="eventTypeOptions"
-                placeholder="Select event type"
-                class="w-full dark-select mb-8"
-              />
-
               <UInput
                 v-model="newEvent.title"
                 placeholder="Enter event title"
@@ -219,7 +266,7 @@ const handleModalClose = () => {
                   <UBadge
                     v-for="(tag, index) in newEvent.tags || []"
                     :key="index"
-                    color="primary"
+                    :color="newEvent.eventType === 'virtual_event' ? 'info' : 'primary'"
                     class="flex items-center"
                   >
                     {{ tagOptions.find((t) => t.value === tag)?.label || tag }}
@@ -227,6 +274,7 @@ const handleModalClose = () => {
                       size="xs"
                       icon="i-heroicons-x-mark"
                       class="ml-1"
+                      :color="newEvent.eventType === 'virtual_event' ? 'info' : 'primary'"
                       @click="removeTag(index)"
                     />
                   </UBadge>
@@ -244,7 +292,7 @@ const handleModalClose = () => {
                     placeholder="Select a tag"
                     class="flex-grow dark-select"
                   />
-                  <UButton @click="addTag" :disabled="!selectedTag"
+                  <UButton @click="addTag" :disabled="!selectedTag" :color="buttonColor"
                     >Add Tag</UButton
                   >
                 </div>
@@ -253,6 +301,14 @@ const handleModalClose = () => {
                   v-if="newEvent.eventType === 'builders_skill_sprint'"
                   v-model="newEvent.challengeFormLink"
                   :placeholder="'Hands-on Form Link'"
+                  class="w-full dark-input mb-8"
+                />
+
+                <!-- Meetup Link for Virtual Events -->
+                <UInput
+                  v-if="newEvent.eventType === 'virtual_event'"
+                  v-model="newEvent.meetupLink"
+                  placeholder="Meetup URL"
                   class="w-full dark-input mb-8"
                 />
               </div>
@@ -388,72 +444,38 @@ const handleModalClose = () => {
             </div>
           </template>
 
+          <!-- Virtual Event Details - Simplified form -->
           <template v-if="newEvent.eventType === 'virtual_event'">
             <UDivider class="border-gray-700" />
             <div class="my-8 space-y-6">
               <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium border-b border-gray-700 pb-2">
+                <h3 class="text-lg font-medium border-b border-gray-700 pb-2 text-info-500">
                   Virtual Event Details
                 </h3>
               </div>
 
-              <div class="space-y-8">
-                <div class="border border-gray-700 rounded-md p-6 bg-gray-800">
-                  <div class="space-y-6">
-                    <UForm :state="newCheckpoint">
-                      <UInput
-                        v-model="newCheckpoint.title"
-                        placeholder="Event Title"
-                        class="w-full dark-input mb-8"
-                      />
+              <div class="space-y-6">
+                <UFormField label="Event Poster Image">
+                  <UInput
+                    v-model="newCheckpoint.posterImage"
+                    type="file"
+                    class="w-full dark-input mb-8"
+                  />
+                </UFormField>
 
-                      <UInput
-                        v-model="newCheckpoint.date"
-                        type="date"
-                        class="w-full dark-input mb-8"
-                      />
-
-                      <UTextarea
-                        v-model="newCheckpoint.description"
-                        placeholder="Description"
-                        :rows="3"
-                        class="w-full dark-input mb-8"
-                      />
-
-                      <UInput
-                        v-model="newCheckpoint.meetupUrl"
-                        placeholder="Meetup URL"
-                        class="w-full dark-input mb-8"
-                      />
-
-                      <UFormField label="Upload Poster Image">
-                        <UInput
-                          v-model="newCheckpoint.posterImage"
-                          type="file"
-                          class="w-full dark-input mb-8"
-                        />
-                      </UFormField>
-
-                      <UButton
-                        block
-                        color="primary"
-                        @click="addCheckpoint"
-                        :disabled="
-                          !newCheckpoint.title || !newCheckpoint.description
-                        "
-                      >
-                        <UIcon name="i-heroicons-plus" class="mr-1" />
-                        Add
-                      </UButton>
-                    </UForm>
-                  </div>
-                </div>
+                <UFormField label="YouTube Video ID">
+                  <UInput
+                    v-model="newCheckpoint.youtubeVideoId"
+                    placeholder="e.g., dQw4w9WgXcQ"
+                    class="w-full dark-input mb-8"
+                  />
+                </UFormField>
               </div>
             </div>
           </template>
 
           <!-- Resources Section -->
-          
+          <UDivider class="border-gray-700" />
           <div class="my-8 space-y-6">
             <div class="flex justify-between items-center mb-4">
               <h3 class="text-lg font-medium border-b border-gray-700 pb-2">
@@ -559,7 +581,9 @@ const handleModalClose = () => {
           <UButton variant="outline" color="neutral" @click="cancel"
             >Cancel</UButton
           >
-          <UButton color="primary" @click="submitForm">Create Event</UButton>
+          <UButton :color="buttonColor" @click="submitForm">
+            {{ isEditMode ? 'Update Event' : 'Create Event' }}
+          </UButton>
         </div>
       </div>
     </template>

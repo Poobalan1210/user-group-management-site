@@ -103,17 +103,17 @@ const columns = [
                 <div class="space-y-6">
                   <!-- Submission Details -->
                   <div>
-                    <h3 class="text-lg font-semibold mb-2">Submission Details</h3>
+                    <h3 class="text-lg font-semibold mb-2 text-primary-600 dark:text-primary-400">Submission Details</h3>
                     <div class="grid grid-cols-2 gap-2 mb-3">
-                      <div class="font-medium">Name:</div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300">Name:</div>
                       <div>{{ row.original.name }}</div>
-                      <div class="font-medium">Email:</div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300">Email:</div>
                       <div>{{ row.original.email }}</div>
-                      <div class="font-medium">Type:</div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300">Type:</div>
                       <div>{{ row.original.type }}</div>
-                      <div class="font-medium">Event:</div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300">Event:</div>
                       <div>{{ row.original.event }}</div>
-                      <div class="font-medium">Date:</div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300">Date:</div>
                       <div>{{ new Date(row.original.date).toLocaleString() }}</div>
                     </div>
                     
@@ -121,11 +121,11 @@ const columns = [
 
                   <!-- AI Analysis -->
                   <div>
-                    <h3 class="text-lg font-semibold mb-2">AI Analysis</h3>
+                    <h3 class="text-lg font-semibold mb-2 text-primary-600 dark:text-primary-400">AI Analysis</h3>
                     <div class="space-y-4">
                       <div class="grid grid-cols-3 gap-4">
                         <div>
-                          <div class="font-medium mb-1">Relevance</div>
+                          <div class="font-medium mb-1 text-gray-700 dark:text-gray-300">Relevance</div>
                           <UProgress
                             v-model="row.original.aiAnalysis.relevance"
                             :max="100"
@@ -134,7 +134,7 @@ const columns = [
                           <div class="text-right text-sm mt-1">{{ row.original.aiAnalysis.relevance }}/100</div>
                         </div>
                         <div>
-                          <div class="font-medium mb-1">Quality</div>
+                          <div class="font-medium mb-1 text-gray-700 dark:text-gray-300">Quality</div>
                           <UProgress
                             v-model="row.original.aiAnalysis.quality"
                             :max="100"
@@ -143,7 +143,7 @@ const columns = [
                           <div class="text-right text-sm mt-1">{{ row.original.aiAnalysis.quality }}/100</div>
                         </div>
                         <div>
-                          <div class="font-medium mb-1">Originality</div>
+                          <div class="font-medium mb-1 text-gray-700 dark:text-gray-300">Originality</div>
                           <UProgress
                           v-model="row.original.aiAnalysis.originality"
                             :max="100"
@@ -153,7 +153,7 @@ const columns = [
                         </div>
                       </div>
                       <div>
-                        <h3 class="text-lg font-semibold mb-2">AI Summary:</h3>
+                        <h3 class="text-lg font-semibold mb-2 text-primary-600 dark:text-primary-400">AI Summary</h3>
                         <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded break-words whitespace-normal overflow-hidden">
                           {{ row.original.aiAnalysis.summary }}
                         </div>
@@ -163,10 +163,10 @@ const columns = [
 
                   <!-- Admin Review -->
                   <div>
-                    <h3 class="text-lg font-semibold mb-2">Your Review</h3>
+                    <h3 class="text-lg font-semibold mb-2 text-primary-600 dark:text-primary-400">Your Review</h3>
                     <div>
                       <div class="mb-4">
-                        <label class="block text-sm font-medium mb-1">Points</label>
+                        <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Points</label>
                         <UInput
                           v-model.number="row.original.adminReview.points"
                           type="number"
@@ -175,7 +175,7 @@ const columns = [
                         />
                       </div>
                       <div class="mb-4">
-                        <label class="block text-sm font-medium mb-1">Feedback</label>
+                        <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Feedback</label>
                         <UTextarea
                           v-model="row.original.adminReview.feedback"
                           :rows="5"
