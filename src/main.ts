@@ -7,6 +7,8 @@ import uiPlugin from "@nuxt/ui/vue-plugin";
 import App from "./App.vue";
 import router from "./router";
 import { configureAmplify } from './auth/auth';
+import { plugin, defaultConfig } from '@formkit/vue'
+
 
 // Configure AWS Amplify
 configureAmplify();
@@ -21,5 +23,7 @@ app.use(pinia);
 // Use plugins
 app.use(uiPlugin);
 app.use(router);
+app.use(plugin, defaultConfig)
+
 
 app.mount("#app");

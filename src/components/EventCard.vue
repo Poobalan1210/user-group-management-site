@@ -2,6 +2,10 @@
 import { ref, computed } from 'vue';
 import type { Event } from '../data/events';
 import { useAdmin } from '../composables/useAdmin';
+import { useAuthStore } from '../auth/authStore';
+import { SubmissionService } from '../services/submissionService';
+import { getFormSchemaName } from '../data/formSchemas';
+import ChallengeForm from './ChallengeForm.vue';
 
 const props = defineProps<{
   event: Event;
@@ -16,6 +20,7 @@ const { isAdmin } = useAdmin();
 const isExpanded = ref(false);
 const showResources = ref(false);
 const showChallengeForm = ref(false);
+const showChallengeModal = ref(false);
 const activeCheckpoint = ref<number | null>(null);
 
 const toggleExpand = () => {
@@ -41,6 +46,56 @@ const toggleChallengeForm = (e: MouseEvent) => {
   showChallengeForm.value = !showChallengeForm.value;
   // Ensure scrolling is always enabled
   document.body.style.overflow = "";
+};
+
+const handleChallengeSubmit = async (data: any) => {
+  const authStore = useAuthStore();
+
+  try {
+    const submission = {
+      eventTitle: props.event.title,
+      schemaId: data.schemaId,
+      schemaName: data.schemaName,
+      formData: data,
+      submittedAt: data.submittedAt,
+      submittedBy: authStore.user?.attributes?.email || 'anonymous'
+    };
+
+    // Submit the challenge using the submission service
+    await SubmissionService.submitChallenge(submission);
+
+    // Show success message using toast (if available) or alert
+    if (window.$toast) {
+      window.$toast.add({
+        title: 'Success!',
+        description: 'Challenge submitted successfully! Your submission has been recorded.',
+        color: 'green'
+      });
+    } else {
+      alert('Challenge submitted successfully! Your submission has been recorded.');
+    }
+  } catch (error) {
+    console.error('Error submitting challenge:', error);
+    // Show error message
+    if (window.$toast) {
+      window.$toast.add({
+        title: 'Error',
+        description: 'Error submitting challenge. Please try again.',
+        color: 'red'
+      });
+    } else {
+      alert('Error submitting challenge. Please try again.');
+    }
+  }
+};
+
+const closeChallengeForm = () => {
+  showChallengeModal.value = false;
+};
+
+const openChallengeModal = (e: MouseEvent) => {
+  e.stopPropagation();
+  showChallengeModal.value = true;
 };
 
 const toggleCheckpointDetails = (index: number, e: MouseEvent) => {
@@ -78,7 +133,7 @@ const formatMonthYear = (dateString: string) => {
 
 
 const sortedCheckpoints = computed(() => {
-  return [...props.event.checkpoints].sort((a, b) => 
+  return [...props.event.checkpoints].sort((a, b) =>
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 });
@@ -102,19 +157,9 @@ const sortedCheckpoints = computed(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <UButton
-            v-if="isAdmin"
-            size="xs"
-            :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
-            variant="ghost"
-            icon="i-heroicons-pencil-square"
-            @click.stop="handleEdit"
-            class="mr-2"
-          />
-          <UIcon
-            :name="isExpanded ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-            class="text-gray-500"
-          />
+          <UButton v-if="isAdmin" size="xs" :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
+            variant="ghost" icon="i-heroicons-pencil-square" @click.stop="handleEdit" class="mr-2" />
+          <UIcon :name="isExpanded ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="text-gray-500" />
         </div>
       </div>
     </UCardHeader>
@@ -122,7 +167,7 @@ const sortedCheckpoints = computed(() => {
     <div v-if="isExpanded">
       <UCardBody>
         <p class="mb-4">{{ event.description }}</p>
-        
+
         <!-- Event Type and Tags -->
         <div class="mb-4">
           <div class="flex flex-wrap gap-2 items-center mb-2">
@@ -135,60 +180,45 @@ const sortedCheckpoints = computed(() => {
             <span v-else class="text-sm text-gray-500 italic">No tags</span>
           </div>
         </div>
-        
+
         <!-- Meetup Link - Only for Virtual Events -->
         <div v-if="event.eventType === 'virtual_event' && event.meetupLink" class="mb-6">
-          <UButton
-            size="sm"
-            color="info"
-            variant="outline"
-            :to="event.meetupLink"
-            target="_blank"
-            icon="i-heroicons-user-group"
-          >
+          <UButton size="sm" color="info" variant="outline" :to="event.meetupLink" target="_blank"
+            icon="i-heroicons-user-group">
             Join Meetup
           </UButton>
         </div>
 
         <!-- Virtual Event Media -->
-        <div v-if="event.eventType === 'virtual_event' && event.checkpoints && event.checkpoints.length > 0" class="mb-6">
+        <div v-if="event.eventType === 'virtual_event' && event.checkpoints && event.checkpoints.length > 0"
+          class="mb-6">
           <div class="media-container mb-4">
             <!-- Poster Image -->
             <div v-if="event.checkpoints[0].posterImage" class="aspect-video overflow-hidden">
-              <img 
-                :src="event.checkpoints[0].posterImage" 
-                :alt="`Poster for ${event.title}`"
-                class="w-full h-full object-contain rounded-lg shadow-sm"
-              />
+              <img :src="event.checkpoints[0].posterImage" :alt="`Poster for ${event.title}`"
+                class="w-full h-full object-contain rounded-lg shadow-sm" />
             </div>
-            
+
             <!-- YouTube Video Embed -->
             <div v-if="event.checkpoints[0].youtubeVideoId" class="aspect-video">
-              <iframe
-                class="w-full h-full rounded-lg"
-                :src="`https://www.youtube.com/embed/${event.checkpoints[0].youtubeVideoId}`"
-                frameborder="0"
+              <iframe class="w-full h-full rounded-lg"
+                :src="`https://www.youtube.com/embed/${event.checkpoints[0].youtubeVideoId}`" frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-              ></iframe>
+                allowfullscreen></iframe>
             </div>
           </div>
         </div>
-        
+
         <!-- Checkpoints Section - Only for Builders Skill Sprint -->
         <div v-if="event.eventType === 'builders_skill_sprint' && event.checkpoints.length > 0" class="mb-6">
           <h4 class="font-medium mb-3 flex items-center">
             <UIcon name="i-heroicons-flag" class="mr-2 text-primary-500" />
             Checkpoints
           </h4>
-          
+
           <div class="space-y-3">
-            <UCard 
-              v-for="(checkpoint, index) in sortedCheckpoints" 
-              :key="index" 
-              class="border border-gray-200"
-              @click.stop="toggleCheckpointDetails(index, $event)"
-            >
+            <UCard v-for="(checkpoint, index) in sortedCheckpoints" :key="index" class="border border-gray-200"
+              @click.stop="toggleCheckpointDetails(index, $event)">
               <div class="flex justify-between items-start">
                 <div>
                   <div class="flex items-center">
@@ -197,128 +227,99 @@ const sortedCheckpoints = computed(() => {
                   </div>
                   <p class="text-sm text-gray-600 mt-1">{{ formatDate(checkpoint.date) }}</p>
                 </div>
-                <UIcon
-                  :name="activeCheckpoint === index ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-                  class="text-gray-500"
-                />
+                <UIcon :name="activeCheckpoint === index ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+                  class="text-gray-500" />
               </div>
-              
+
               <!-- Expanded Checkpoint Details -->
               <div v-if="activeCheckpoint === index" class="mt-4 pt-4 border-t">
                 <p class="mb-4">{{ checkpoint.description }}</p>
-                
+
                 <!-- Checkpoint Meetup Link -->
                 <div v-if="checkpoint.meetupUrl" class="mb-4">
-                  <UButton
-                    size="sm"
-                    color="primary"
-                    :to="checkpoint.meetupUrl"
-                    target="_blank"
-                    icon="i-heroicons-user-group"
-                  >
+                  <UButton size="sm" color="primary" :to="checkpoint.meetupUrl" target="_blank"
+                    icon="i-heroicons-user-group">
                     Join Meetup
                   </UButton>
                 </div>
-                
+
                 <!-- Media Section - Poster and Video -->
                 <div class="media-container mb-4">
                   <!-- Poster Image -->
                   <div v-if="checkpoint.posterImage" class="aspect-video overflow-hidden">
-                    <img 
-                      :src="checkpoint.posterImage" 
-                      :alt="`Poster for ${checkpoint.title}`"
-                      class="w-full h-full object-contain rounded-lg shadow-sm"
-                    />
+                    <img :src="checkpoint.posterImage" :alt="`Poster for ${checkpoint.title}`"
+                      class="w-full h-full object-contain rounded-lg shadow-sm" />
                   </div>
-                  
+
                   <!-- YouTube Video Embed -->
                   <div v-if="checkpoint.youtubeVideoId" class="aspect-video">
-                    <iframe
-                      class="w-full h-full rounded-lg"
-                      :src="`https://www.youtube.com/embed/${checkpoint.youtubeVideoId}`"
-                      frameborder="0"
+                    <iframe class="w-full h-full rounded-lg"
+                      :src="`https://www.youtube.com/embed/${checkpoint.youtubeVideoId}`" frameborder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowfullscreen
-                    ></iframe>
+                      allowfullscreen></iframe>
                   </div>
                 </div>
               </div>
             </UCard>
           </div>
         </div>
-        
+
         <!-- Challenge Submission Section - Only for Builders Skill Sprint -->
-        <div v-if="event.eventType === 'builders_skill_sprint' && event.challengeFormLink" class="mb-6">
+        <div
+          v-if="event.eventType === 'builders_skill_sprint' && (event.challengeFormSchema || event.challengeFormLink)"
+          class="mb-6">
           <h4 class="font-medium mb-3 flex items-center">
             <UIcon name="i-heroicons-document-check" class="mr-2 text-primary-500" />
             Challenge Submission
           </h4>
-          
-          <UCard 
-            class="border border-gray-200"
-            @click.stop="toggleChallengeForm"
-          >
+
+          <UCard class="border border-gray-200" @click.stop="toggleChallengeForm">
             <div class="flex justify-between items-center">
               <h5 class="font-medium">Submit your challenge</h5>
-              <UIcon
-                :name="showChallengeForm ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-                class="text-gray-500"
-              />
+              <UIcon :name="showChallengeForm ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+                class="text-gray-500" />
             </div>
-            
+
             <div v-if="showChallengeForm" class="mt-4 pt-4 border-t">
-              <p class="mb-4">Submit your completed challenge using the form below:</p>
-              <UButton
-                block
-                color="primary"
-                :to="event.challengeFormLink"
-                target="_blank"
-                icon="i-heroicons-document-text"
-              >
-                Open Submission Form
-              </UButton>
+              <div v-if="event.challengeFormSchema">
+                <p class="mb-2">Submit your completed challenge:</p>
+                <p v-if="isAdmin" class="text-xs text-gray-500 mb-4">
+                  Form: {{ getFormSchemaName(event.challengeFormSchema) }}
+                </p>
+                <UButton block color="primary" icon="i-heroicons-document-text" @click="openChallengeModal">
+                  Submit Challenge
+                </UButton>
+              </div>
             </div>
           </UCard>
         </div>
-        
+
         <!-- Resources Section -->
         <div class="mb-6">
           <h4 class="font-medium mb-3 flex items-center">
             <UIcon name="i-heroicons-book-open" class="mr-2 text-primary-500" />
             Resources
           </h4>
-          
-          <UCard 
-            class="border border-gray-200"
-            @click.stop="toggleResources"
-          >
+
+          <UCard class="border border-gray-200" @click.stop="toggleResources">
             <div class="flex justify-between items-center">
               <h5 class="font-medium">View resources</h5>
-              <UIcon
-                :name="showResources ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-                class="text-gray-500"
-              />
+              <UIcon :name="showResources ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+                class="text-gray-500" />
             </div>
-            
+
             <div v-if="showResources" class="mt-4 pt-4 border-t">
               <div v-for="(resource, index) in event.resources" :key="index" class="mb-2">
                 <UCard class="border border-gray-200">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                      <UIcon
-                        :name="resource.type === 'document' ? 'i-heroicons-document-text' : 
-                               resource.type === 'video' ? 'i-heroicons-video-camera' : 
-                               resource.type === 'code' ? 'i-heroicons-code-bracket' : 'i-heroicons-link'"
-                        class="mr-2"
-                      />
+                      <UIcon :name="resource.type === 'document' ? 'i-heroicons-document-text' :
+                        resource.type === 'video' ? 'i-heroicons-video-camera' :
+                          resource.type === 'code' ? 'i-heroicons-code-bracket' : 'i-heroicons-link'" class="mr-2" />
                       <span>{{ resource.title }}</span>
                     </div>
-                    <UButton
-                      size="xs"
-                      :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
-                      :to="resource.link"
-                      target="_blank"
-                    >
+                    <UButton size="xs" :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
+                      :to="resource.link" target="_blank">
                       Open
                     </UButton>
                   </div>
@@ -330,6 +331,13 @@ const sortedCheckpoints = computed(() => {
       </UCardBody>
     </div>
   </UCard>
+
+  <!-- Challenge Form Modal -->
+  <Teleport to="body">
+    <ChallengeForm v-if="showChallengeModal" :is-open="showChallengeModal" :event-title="event.title"
+      :form-schema-id="event.challengeFormSchema" @close="closeChallengeForm" @submit="handleChallengeSubmit" />
+  </Teleport>
+
 </template>
 
 <style scoped>
@@ -343,7 +351,8 @@ const sortedCheckpoints = computed(() => {
 .aspect-video {
   position: relative;
   width: 100%;
-  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+  padding-bottom: 56.25%;
+  /* 16:9 Aspect Ratio */
 }
 
 .aspect-video img,
@@ -355,4 +364,4 @@ const sortedCheckpoints = computed(() => {
   height: 100%;
   object-fit: cover;
 }
-</style> 
+</style>

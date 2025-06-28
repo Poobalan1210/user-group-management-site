@@ -12,6 +12,7 @@ Globals:
       Variables:
         USERS_TABLE: !Ref UsersTable
         EVENTS_TABLE: !Ref EventsTable
+        SUBMISSIONS_TABLE: !Ref SubmissionsTable
     AutoPublishAlias: live
     # Package each function individually with only its required dependencies
     CodeUri: ./src/
@@ -23,8 +24,8 @@ Resources:
     Properties:
       StageName: prod
       Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE'"
-        AllowHeaders: "'Content-Type,Authorization'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
         AllowOrigin: "'*'"
 
   # DynamoDB Tables
@@ -54,6 +55,32 @@ Resources:
           KeyType: HASH
         - AttributeName: date
           KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  # Submissions Table
+  SubmissionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: submissions
+      AttributeDefinitions:
+        - AttributeName: submissionId
+          AttributeType: S
+        - AttributeName: submittedAt
+          AttributeType: S
+        - AttributeName: submittedBy
+          AttributeType: S
+      KeySchema:
+        - AttributeName: submissionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: SubmittedByIndex
+          KeySchema:
+            - AttributeName: submittedBy
+              KeyType: HASH
+            - AttributeName: submittedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   # Lambda Functions
@@ -170,6 +197,83 @@ Resources:
             Path: /events/{eventId}
             Method: DELETE
 
+  # Submission Service Functions
+  CreateSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/createSubmission.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        CreateSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /submissions
+            Method: POST
+
+  GetSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getSubmission.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /submissions/{submissionId}
+            Method: GET
+
+  GetSubmissionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getSubmissions.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetSubmissions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /submissions
+            Method: GET
+        GetUserSubmissions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /submissions/user/{userId}
+            Method: GET
+
+  UpdateSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/updateSubmission.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        UpdateSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /submissions/{submissionId}
+            Method: PUT
+
+  GetSubmissionStatsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getSubmissionStats.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetSubmissionStats:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /submissions/stats
+            Method: GET
+
   
 
   # Cognito User Pool
@@ -250,6 +354,8 @@ Resources:
                 Resource: 
                   - !GetAtt UsersTable.Arn
                   - !GetAtt EventsTable.Arn
+                  - !GetAtt SubmissionsTable.Arn
+                  - !Sub "${SubmissionsTable.Arn}/index/*"
 
 Outputs:
   ApiEndpoint:
@@ -263,4 +369,4 @@ Outputs:
   UserPoolClientId:
     Description: Cognito User Pool Client ID
     Value: !Ref UserPoolClient
-    
+

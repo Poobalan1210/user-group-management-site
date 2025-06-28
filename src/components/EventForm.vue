@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed, onUnmounted } from "vue";
 import type { Checkpoint, Resource, Event } from "../data/events";
+import { getFormSchemaOptions } from "../data/formSchemas";
 
 const props = defineProps<{
   isOpen: boolean;
@@ -28,7 +29,7 @@ const initializeForm = () => {
       date: props.eventToEdit.date,
       eventType: props.eventToEdit.eventType,
       tags: [...(props.eventToEdit.tags || [])],
-      challengeFormLink: props.eventToEdit.challengeFormLink || "",
+      challengeFormSchema: props.eventToEdit.challengeFormSchema || "",
       meetupLink: props.eventToEdit.meetupLink || "",
       checkpoints: props.eventToEdit.checkpoints.map(cp => ({ ...cp })),
       resources: props.eventToEdit.resources.map(res => ({ ...res })),
@@ -44,6 +45,7 @@ const initializeForm = () => {
     eventType: (props.defaultEventType || "builders_skill_sprint") as "builders_skill_sprint" | "virtual_event",
     tags: [],
     challengeFormLink: "",
+    challengeFormSchema: "",
     meetupLink: "",
     checkpoints: [],
     resources: [],
@@ -111,6 +113,8 @@ const resourceTypeOptions = [
   { label: "Other", value: "other" },
 ];
 
+const formSchemaOptions = getFormSchemaOptions();
+
 const statusOptions = [
   { label: "Live", value: "live" },
   { label: "Past", value: "past" },
@@ -141,7 +145,7 @@ watch(
     if (newType === "virtual_event") {
       // Clear checkpoints for virtual events
       newEvent.checkpoints = [];
-      newEvent.challengeFormLink = "";
+      newEvent.challengeFormSchema = "";
     } else if (newType === "builders_skill_sprint") {
       // Clear meetup link for builders skill sprint (only checkpoints have meetup links)
       newEvent.meetupLink = "";
@@ -297,12 +301,15 @@ const handleModalClose = () => {
                   >
                 </div>
 
-                <UInput
-                  v-if="newEvent.eventType === 'builders_skill_sprint'"
-                  v-model="newEvent.challengeFormLink"
-                  :placeholder="'Hands-on Form Link'"
-                  class="w-full dark-input mb-8"
-                />
+                <div v-if="newEvent.eventType === 'builders_skill_sprint'" class="mb-8">
+                  <label class="block text-sm font-medium mb-2 text-white">Challenge Form Schema</label>
+                  <USelect
+                    v-model="newEvent.challengeFormSchema"
+                    :items="formSchemaOptions"
+                    placeholder="Select a form schema for challenge submissions"
+                    class="w-full dark-select"
+                  />
+                </div>
 
                 <!-- Meetup Link for Virtual Events -->
                 <UInput

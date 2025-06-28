@@ -28,6 +28,7 @@
       "src/**/*.vue",
       "auto-imports.d.ts",
       "components.d.ts",
-      "app.config.ts"
+      "app.config.ts",
+      "nuxt.config.ts",  
     ]
   }

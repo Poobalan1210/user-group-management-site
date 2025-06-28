@@ -21,7 +21,7 @@ export interface Event {
   date: string;
   eventType: 'builders_skill_sprint' | 'virtual_event';
   tags?: string[];
-  challengeFormLink?: string;
+  challengeFormSchema?: string; // New: ID of the selected form schema
   meetupLink?: string;
   checkpoints: Checkpoint[];
   resources: Resource[];
@@ -36,7 +36,7 @@ export const events: Event[] = [
     date: '2023-11-15',
     eventType: 'builders_skill_sprint',
     tags: ['aws', 'serverless', 'backend'],
-    challengeFormLink: 'https://forms.example.com/serverless-hackathon',
+    challengeFormSchema: 'project-submission',
     meetupLink: 'https://meetup.com/events/serverless-hackathon',
     checkpoints: [
       {
@@ -99,7 +99,7 @@ export const events: Event[] = [
     date: '2023-10-05',
     eventType: 'builders_skill_sprint',
     tags: ['frontend', 'devops'],
-    challengeFormLink: 'https://forms.example.com/web-performance',
+    challengeFormSchema: 'basic-submission',
     checkpoints: [
       {
         title: 'Performance Audit',

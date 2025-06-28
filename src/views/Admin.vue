@@ -1,13 +1,106 @@
 <script setup lang="ts">
-import { useAdminData } from '../composables/useAdminData';
-import { h, resolveComponent, ref } from 'vue';
+import { h, resolveComponent, ref, onMounted } from 'vue';
+import { SubmissionService } from '../services/submissionService';
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
 
-const { 
-  submissions
-} = useAdminData();
+// State for submissions and loading state
+const submissions = ref([]);
+const isLoading = ref(true);
+const stats = ref({
+  totalSubmissions: 0,
+  pendingSubmissions: 0,
+  approvedSubmissions: 0,
+  rejectedSubmissions: 0,
+  totalPoints: 0
+});
+
+// Fetch submissions and stats on component mount
+onMounted(async () => {
+  try {
+    isLoading.value = true;
+    
+    // Get all submissions
+    const submissionsData = await SubmissionService.getAllSubmissions();
+    submissions.value = submissionsData.map(submission => ({
+      id: submission.submissionId,
+      name: submission.formData?.projectName || submission.formData?.title || 'Unnamed Submission',
+      email: submission.submittedBy,
+      event: submission.eventTitle,
+      type: submission.submissionType || 'Challenge',
+      date: submission.submittedAt,
+      content: JSON.stringify(submission.formData),
+      link: submission.formData?.githubUrl || submission.formData?.projectUrl || submission.formData?.articleUrl || '#',
+      aiAnalysis: {
+        relevance: Math.floor(Math.random() * 30) + 70, // Mock data
+        quality: Math.floor(Math.random() * 30) + 70,   // Mock data
+        originality: Math.floor(Math.random() * 30) + 70, // Mock data
+        summary: 'This is an automatically generated summary of the submission content.'
+      },
+      adminReview: {
+        points: submission.points || 0,
+        feedback: submission.feedback || '',
+        status: submission.status || 'Pending'
+      },
+      // Store the original submission ID for updates
+      originalSubmissionId: submission.submissionId
+    }));
+    
+    // Get submission stats
+    try {
+      const statsData = await SubmissionService.getSubmissionStats();
+      stats.value = statsData;
+    } catch (statsError) {
+      console.error('Error fetching submission stats:', statsError);
+    }
+  } catch (error) {
+    console.error('Error fetching submissions:', error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+// Function to update a submission
+const updateSubmission = async (submission) => {
+  try {
+    const submissionId = submission.originalSubmissionId;
+    if (!submissionId) {
+      console.error('Missing submission ID for update');
+      return;
+    }
+    
+    await SubmissionService.updateSubmission(submissionId, {
+      status: submission.adminReview.status.toLowerCase(),
+      points: submission.adminReview.points,
+      feedback: submission.adminReview.feedback
+    });
+    
+    // Show success message
+    if (window.$toast) {
+      window.$toast.add({
+        title: 'Success',
+        description: 'Submission updated successfully',
+        color: 'green'
+      });
+    } else {
+      alert('Submission updated successfully');
+    }
+  } catch (error) {
+    console.error('Error updating submission:', error);
+    
+    // Show error message
+    if (window.$toast) {
+      window.$toast.add({
+        title: 'Error',
+        description: 'Failed to update submission',
+        color: 'red'
+      });
+    } else {
+      alert('Failed to update submission');
+    }
+  }
+};
 
 const globalFilter = ref("");
 const expanded = ref<Record<string, boolean>>({});
@@ -199,6 +292,13 @@ const columns = [
                             Accept
                           </UButton>
                         </div>
+                        <UButton
+                          color="primary"
+                          @click="updateSubmission(row.original)"
+                          :loading="isLoading"
+                        >
+                          Save Changes
+                        </UButton>
                       </div>
                     </div>
                   </div>

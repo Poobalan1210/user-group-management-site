@@ -9,6 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AuthCallback: typeof import('./src/components/AuthCallback.vue')['default']
+    ChallengeForm: typeof import('./src/components/ChallengeForm.vue')['default']
     DebugAuth: typeof import('./src/components/DebugAuth.vue')['default']
     EventCard: typeof import('./src/components/EventCard.vue')['default']
     EventForm: typeof import('./src/components/EventForm.vue')['default']
