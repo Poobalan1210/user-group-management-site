@@ -50,6 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
       await AuthService.signOut();
       user.value = null;
       isAuthenticated.value = false;
+      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
