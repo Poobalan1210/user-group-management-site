@@ -4,7 +4,6 @@ import type { Event } from '../data/events';
 import { useAdmin } from '../composables/useAdmin';
 import { useAuthStore } from '../auth/authStore';
 import { SubmissionService } from '../services/submissionService';
-import { getFormSchemaName } from '../data/formSchemas';
 import ChallengeForm from './ChallengeForm.vue';
 
 const props = defineProps<{
@@ -266,7 +265,7 @@ const sortedCheckpoints = computed(() => {
 
         <!-- Challenge Submission Section - Only for Builders Skill Sprint -->
         <div
-          v-if="event.eventType === 'builders_skill_sprint' && (event.challengeFormSchema || event.challengeFormLink)"
+          v-if="event.eventType === 'builders_skill_sprint' && (event.challengeFormSchema)"
           class="mb-6">
           <h4 class="font-medium mb-3 flex items-center">
             <UIcon name="i-heroicons-document-check" class="mr-2 text-primary-500" />
@@ -283,12 +282,17 @@ const sortedCheckpoints = computed(() => {
             <div v-if="showChallengeForm" class="mt-4 pt-4 border-t">
               <div v-if="event.challengeFormSchema">
                 <p class="mb-2">Submit your completed challenge:</p>
-                <p v-if="isAdmin" class="text-xs text-gray-500 mb-4">
-                  Form: {{ getFormSchemaName(event.challengeFormSchema) }}
-                </p>
-                <UButton block color="primary" icon="i-heroicons-document-text" @click="openChallengeModal">
-                  Submit Challenge
-                </UButton>
+                <div v-if="useAuthStore().isAuthenticated">
+                  <UButton block color="primary" icon="i-heroicons-document-text" @click="openChallengeModal">
+                    Submit Challenge
+                  </UButton>
+                </div>
+                <div v-else>
+                  <p class="text-sm text-amber-600 mb-2">You need to sign in to submit your challenge</p>
+                  <UButton block color="primary" to="/auth" icon="i-heroicons-user">
+                    Sign In to Submit
+                  </UButton>
+                </div>
               </div>
             </div>
           </UCard>

@@ -12,12 +12,8 @@ exports.handler = async (event) => {
     
     const result = await dynamoDB.send(new ScanCommand(params));
     
-    // Sort users by total points (descending) and assign ranks
+    // Sort users by total points (descending)
     const sortedUsers = result.Items.sort((a, b) => b.totalPoints - a.totalPoints);
-    const usersWithRanks = sortedUsers.map((user, index) => ({
-      ...user,
-      rank: index + 1
-    }));
     
     return {
       statusCode: 200,
@@ -26,7 +22,7 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
       },
-      body: JSON.stringify(usersWithRanks)
+      body: JSON.stringify(sortedUsers)
     };
   } catch (error) {
     console.error('Get all users error:', error);

@@ -1,6 +1,5 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
-const { v4: uuidv4 } = require('uuid');
+const { DynamoDBDocumentClient, PutCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
 
 const client = new DynamoDBClient();
 const dynamoDB = DynamoDBDocumentClient.from(client);
@@ -8,19 +7,40 @@ const dynamoDB = DynamoDBDocumentClient.from(client);
 exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
-    const userId = uuidv4();
     
+    // Check if user already exists by email
+    const checkParams = {
+      TableName: process.env.USERS_TABLE,
+      Key: {
+        email: body.email
+      }
+    };
+    
+    const existingUser = await dynamoDB.send(new GetCommand(checkParams));
+    
+    if (existingUser.Item) {
+      // User already exists, return existing user
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
+        body: JSON.stringify(existingUser.Item)
+      };
+    }
+    
+    // Create new user with email as primary key
     const params = {
       TableName: process.env.USERS_TABLE,
       Item: {
-        userId: userId,
-        email: body.email,
+        email: body.email, // Use email as primary key
         name: body.name,
         linkedinUrl: body.linkedinUrl || '',
         githubUrl: body.githubUrl || '',
         totalPoints: 0,
         totalSubmissions: 0,
-        rank: 0,
         createdAt: body.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

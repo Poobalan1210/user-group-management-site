@@ -1,25 +1,64 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { computed, ref, h, resolveComponent } from 'vue';
-import { useLeaderboardData } from '../composables/useLeaderboardData';
+import { computed, ref, h, resolveComponent, onMounted } from 'vue';
+import { UserService } from '../services/userService';
+import { SubmissionService } from '../services/submissionService';
 import type { TableColumn } from "@nuxt/ui";
 import type { Submission } from '../types';
+import type { User } from '../services/userService';
 
 const route = useRoute();
-const userId = route.params.id as string;
+const email = decodeURIComponent(route.params.id as string);
 const searchQuery = ref('');
+const user = ref<User | null>(null);
+const userSubmissions = ref<Submission[]>([]);
+const isLoading = ref(true);
+const error = ref<string | null>(null);
 
-const { data } = useLeaderboardData();
-const user = computed(() => data.value.find(p => p.id === userId));
+// Load user data and submissions
+const loadUserData = async () => {
+  try {
+    isLoading.value = true;
+    error.value = null;
+    
+    // Get user by email
+    const userData = await UserService.getUserByEmail(email);
+    user.value = userData;
+    
+    // Get user's submissions
+    const submissions = await SubmissionService.getAllSubmissions();
+    const userSubs = submissions.filter(sub => sub.submittedBy === userData.email);
+    
+    // Transform submissions to match expected format
+    userSubmissions.value = userSubs.map(sub => ({
+      date: sub.submittedAt,
+      name: sub.formData?.projectName || sub.formData?.title || sub.formData?.workshopTitle || 'Unnamed Submission',
+      type: (sub.submissionType || 'Challenge') as 'Article' | 'Project' | 'Challenge' | 'Workshop',
+      points: sub.points || 0,
+      status: (sub.status === 'approved' ? 'Approved' : 
+               sub.status === 'rejected' ? 'Rejected' : 'Pending') as 'Approved' | 'Pending' | 'Rejected',
+      url: sub.formData?.githubUrl || sub.formData?.projectUrl || sub.formData?.articleUrl || sub.formData?.materialsUrl || '#'
+    }));
+  } catch (err) {
+    console.error('Error loading user data:', err);
+    error.value = 'Failed to load user profile';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadUserData();
+});
 
 const UBadge = resolveComponent("UBadge");
 const UButton = resolveComponent("UButton");
 
 // Calculate achievement stats
 const achievements = computed(() => {
-  if (!user.value) return [];
+  if (!user.value || !userSubmissions.value) return [];
   
-  const submissions = user.value.submissions || [];
+  const submissions = userSubmissions.value;
   const approvedSubmissions = submissions.filter(s => s.status === 'Approved');
   
   return [
@@ -48,8 +87,7 @@ const achievements = computed(() => {
 
 // Get all submissions
 const allSubmissions = computed(() => {
-  if (!user.value) return [];
-  return user.value.submissions || [];
+  return userSubmissions.value || [];
 });
 
 // Define columns for submissions table
@@ -117,22 +155,27 @@ const socialLinks = computed(() => {
     linkedin: '#'
   };
   
-  // Try to get from user attributes if available
-  const githubUrl = user.value.attributes?.['custom:githuburl'] || 
-                    `https://github.com/${user.value.name.toLowerCase().replace(' ', '')}`;
-  
-  const linkedinUrl = user.value.attributes?.['custom:linkedinurl'] || 
-                      `https://linkedin.com/in/${user.value.name.toLowerCase().replace(' ', '-')}`;
-  
   return {
-    github: githubUrl,
-    linkedin: linkedinUrl
+    github: user.value.githubUrl || '#',
+    linkedin: user.value.linkedinUrl || '#'
   };
 });
 </script>
 
 <template>
-  <div v-if="user" class="container mx-auto px-4 py-8">
+  <div v-if="isLoading" class="container mx-auto px-4 py-8 text-center">
+    <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500 mx-auto"></div>
+    <p class="mt-4 text-gray-600">Loading user profile...</p>
+  </div>
+  
+  <div v-else-if="error" class="container mx-auto px-4 py-8 text-center">
+    <UIcon name="i-lucide-alert-circle" class="text-6xl mx-auto mb-4 text-red-400" />
+    <h2 class="text-2xl font-bold">Error Loading Profile</h2>
+    <p class="text-gray-500 mb-4">{{ error }}</p>
+    <UButton @click="loadUserData" color="primary">Try Again</UButton>
+  </div>
+  
+  <div v-else-if="user" class="container mx-auto px-4 py-8">
     <!-- User Header -->
     <UCard class="mb-8">
       <template #header>
@@ -164,10 +207,9 @@ const socialLinks = computed(() => {
             </div>
           </div>
           <div class="flex flex-col items-end">
-            <UBadge color="primary" size="lg" class="mb-2">Rank #{{ user.rank }}</UBadge>
             <div class="flex gap-4">
-              <UStatistic :value="user.totalPoints.toString()" label="Total Points" />
-              <UStatistic :value="user.totalSubmissions.toString()" label="Submissions" />
+              <UStatistic :value="user.totalPoints?.toString() || '0'" label="Total Points" />
+              <UStatistic :value="user.totalSubmissions?.toString() || '0'" label="Submissions" />
             </div>
           </div>
         </div>

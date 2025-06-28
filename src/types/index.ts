@@ -8,10 +8,8 @@ export type Submission = {
   };
   
   export type Participant = {
-    id: string;
-    rank: number;
-    name: string;
     email: string;
+    name: string;
     totalSubmissions: number;
     totalPoints: number;
     profileUrl: string;

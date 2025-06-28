@@ -1,14 +1,12 @@
 import { apiGet, apiPost, apiPut } from '../api/api';
 
 export interface User {
-  userId: string;
   email: string;
   name: string;
   linkedinUrl?: string;
   githubUrl?: string;
   totalPoints: number;
   totalSubmissions: number;
-  rank: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,11 +31,6 @@ export const UserService = {
     return await apiPost<User>('/users', userData);
   },
 
-  // Get user by ID
-  getUserById: async (userId: string): Promise<User> => {
-    return await apiGet<User>(`/users/${userId}`);
-  },
-
   // Get user by email
   getUserByEmail: async (email: string): Promise<User> => {
     return await apiGet<User>(`/users/email/${email}`);
@@ -49,7 +42,7 @@ export const UserService = {
   },
 
   // Update user
-  updateUser: async (userId: string, userData: UpdateUserRequest): Promise<User> => {
-    return await apiPut<User>(`/users/${userId}`, userData);
+  updateUser: async (email: string, userData: UpdateUserRequest): Promise<User> => {
+    return await apiPut<User>(`/users/email/${email}`, userData);
   }
 };

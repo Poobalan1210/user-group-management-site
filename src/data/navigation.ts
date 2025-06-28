@@ -21,9 +21,9 @@ export function getNavigationItems() {
   // Only add Admin tab for admin users
   if (isAdmin.value) {
     items.push({
-      label: 'Admin',
-      to: '/admin',
-      icon: 'i-heroicons-shield-check',
+      label: 'Dashboard',
+      to: '/dashboard',
+      icon: 'i-heroicons-chart-bar',
       class: "text-lg mr-4"
     });
   }

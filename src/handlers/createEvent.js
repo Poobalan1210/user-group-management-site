@@ -17,7 +17,15 @@ exports.handler = async (event) => {
         date: body.date,
         title: body.title,
         description: body.description,
-        createdAt: new Date().toISOString()
+        status: body.status || 'live',
+        eventType: body.eventType || 'builders_skill_sprint',
+        tags: body.tags || [],
+        challengeFormSchema: body.challengeFormSchema || '',
+        meetupLink: body.meetupLink || '',
+        checkpoints: body.checkpoints || [],
+        resources: body.resources || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
     };
     
@@ -26,14 +34,19 @@ exports.handler = async (event) => {
     return {
       statusCode: 201,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
       },
       body: JSON.stringify(params.Item)
     };
   } catch (error) {
-    console.error(error);
+    console.error('Create event error:', error);
     return {
       statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      },
       body: JSON.stringify({ message: 'Internal server error' })
     };
   }

@@ -21,8 +21,8 @@ onMounted(async () => {
   try {
     isLoading.value = true;
     
-    // Get all submissions
-    const submissionsData = await SubmissionService.getAllSubmissions();
+    // Get only pending submissions for admin review
+    const submissionsData = await SubmissionService.getAllSubmissions({ status: 'pending' });
     submissions.value = submissionsData.map(submission => ({
       id: submission.submissionId,
       name: submission.formData?.projectName || submission.formData?.title || 'Unnamed Submission',
@@ -76,15 +76,27 @@ const updateSubmission = async (submission) => {
       feedback: submission.adminReview.feedback
     });
     
+    // Remove submission from admin dashboard after processing
+    if (submission.adminReview.status === 'Approved' || submission.adminReview.status === 'Rejected') {
+      // Remove from the submissions list in the UI
+      const index = submissions.value.findIndex(sub => sub.originalSubmissionId === submissionId);
+      if (index !== -1) {
+        submissions.value.splice(index, 1);
+      }
+      
+      // Note: The submission is not deleted from the database, just marked as processed
+      // This allows for historical tracking and user profile display
+    }
+    
     // Show success message
     if (window.$toast) {
       window.$toast.add({
         title: 'Success',
-        description: 'Submission updated successfully',
+        description: `Submission ${submission.adminReview.status.toLowerCase()} successfully`,
         color: 'green'
       });
     } else {
-      alert('Submission updated successfully');
+      alert(`Submission ${submission.adminReview.status.toLowerCase()} successfully`);
     }
   } catch (error) {
     console.error('Error updating submission:', error);

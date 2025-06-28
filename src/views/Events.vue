@@ -1,43 +1,44 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { events } from '../data/events';
+import { ref, onMounted } from 'vue';
 import type { Event } from '../data/events';
 import EventCard from '../components/EventCard.vue';
 import EventForm from '../components/EventForm.vue';
-import { apiPost } from '../api/api';
+import { useEventStore } from '../stores/eventStore';
 import { useAdmin } from '../composables/useAdmin';
 
 const { isAdmin } = useAdmin();
+const eventStore = useEventStore();
 
 const showCreateForm = ref(false);
-const localEvents = ref([...events]);
 const eventTypeToCreate = ref<'builders_skill_sprint' | 'virtual_event'>('builders_skill_sprint');
 const eventToEdit = ref<Event | undefined>(undefined);
 
-const liveEvents = computed(() => {
-  return localEvents.value.filter(event => event.status === 'live');
-});
-
-const pastEvents = computed(() => {
-  return localEvents.value.filter(event => event.status === 'past');
+// Load events on component mount (uses cache if available)
+onMounted(() => {
+  eventStore.fetchEvents();
 });
 
 const handleCreateEvent = async (newEvent: Event) => {
-  const createdEvent = await apiPost<Event>('/events', newEvent);
-  localEvents.value.unshift(newEvent);
-  console.log('Event created:', newEvent);
-  showCreateForm.value = false;
-  document.body.style.overflow = "";
+  try {
+    await eventStore.createEvent(newEvent);
+    showCreateForm.value = false;
+    document.body.style.overflow = "";
+  } catch (error) {
+    console.error('Error creating event:', error);
+    alert('Failed to create event. Please try again.');
+  }
 };
 
-const handleUpdateEvent = (updatedEvent: Event) => {
-  const index = localEvents.value.findIndex(event => event.id === updatedEvent.id);
-  if (index !== -1) {
-    localEvents.value[index] = updatedEvent;
+const handleUpdateEvent = async (updatedEvent: Event) => {
+  try {
+    await eventStore.updateEvent(updatedEvent.id, updatedEvent);
+    showCreateForm.value = false;
+    eventToEdit.value = undefined;
+    document.body.style.overflow = "";
+  } catch (error) {
+    console.error('Error updating event:', error);
+    alert('Failed to update event. Please try again.');
   }
-  showCreateForm.value = false;
-  eventToEdit.value = undefined;
-  document.body.style.overflow = "";
 };
 
 const handleEditEvent = (event: Event) => {
@@ -62,6 +63,10 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
   <div class="container mx-auto p-4">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">Events</h1>
+      <div v-if="eventStore.isLoading" class="flex items-center">
+        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500 mr-2"></div>
+        <span class="text-sm text-gray-600">Loading events...</span>
+      </div>
       <div v-if="isAdmin" class="flex gap-2">
         <UButton color="primary" @click="openCreateForm('builders_skill_sprint')">
           <UIcon name="i-heroicons-plus" class="mr-1" />
@@ -84,6 +89,9 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
       @cancel="cancelCreate" 
     />
 
+    <!-- Error Alert -->
+    <UAlert v-if="eventStore.error" color="error" class="mb-6" :title="eventStore.error" />
+
     <!-- Live Events Section -->
     <div class="mb-8">
       <div class="flex items-center mb-4">
@@ -91,9 +99,9 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
         <h2 class="text-xl font-semibold">Live Events</h2>
       </div>
       
-      <div v-if="liveEvents.length > 0" class="space-y-4">
+      <div v-if="eventStore.liveEvents.length > 0" class="space-y-4">
         <EventCard 
-          v-for="event in liveEvents" 
+          v-for="event in eventStore.liveEvents" 
           :key="event.id" 
           :event="event"
           @edit="handleEditEvent" 
@@ -111,9 +119,9 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
         <h2 class="text-xl font-semibold">Past Events</h2>
       </div>
       
-      <div v-if="pastEvents.length > 0" class="space-y-4">
+      <div v-if="eventStore.pastEvents.length > 0" class="space-y-4">
         <EventCard 
-          v-for="event in pastEvents" 
+          v-for="event in eventStore.pastEvents" 
           :key="event.id" 
           :event="event"
           @edit="handleEditEvent"

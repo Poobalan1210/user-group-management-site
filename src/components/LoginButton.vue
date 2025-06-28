@@ -47,7 +47,12 @@ const userName = computed(() => {
 
 
 const items = computed(() => [
-  { label: 'Profile', icon: 'i-heroicons-user-circle', onSelect: () => window.location.href = '/profile' },
+  { label: 'Profile', icon: 'i-heroicons-user-circle', onSelect: () => {
+    const userEmail = authStore.user?.attributes?.email || authStore.user?.signInDetails?.loginId;
+    if (userEmail) {
+      window.location.href = `/profile/${encodeURIComponent(userEmail)}`;
+    }
+  }},
   { label: 'Sign Out', icon: 'i-heroicons-arrow-right-on-rectangle', onSelect: handleClick }
 ]);
 

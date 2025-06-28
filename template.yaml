@@ -14,7 +14,6 @@ Globals:
         EVENTS_TABLE: !Ref EventsTable
         SUBMISSIONS_TABLE: !Ref SubmissionsTable
     AutoPublishAlias: live
-    # Package each function individually with only its required dependencies
     CodeUri: ./src/
 
 Resources:
@@ -34,10 +33,10 @@ Resources:
     Properties:
       TableName: users
       AttributeDefinitions:
-        - AttributeName: userId
+        - AttributeName: email
           AttributeType: S
       KeySchema:
-        - AttributeName: userId
+        - AttributeName: email
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
@@ -57,7 +56,6 @@ Resources:
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
 
-  # Submissions Table
   SubmissionsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -83,8 +81,7 @@ Resources:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
-  # Lambda Functions
-  # User Management Functions
+  # Lambda Functions - User Management
   CreateUserFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -110,7 +107,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
-            Path: /users/{userId}
+            Path: /users/{email}
             Method: GET
 
   GetUserByEmailFunction:
@@ -152,9 +149,10 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
-            Path: /users/{userId}
+            Path: /users/email/{email}
             Method: PUT
 
+  # Lambda Functions - Event Management
   GetEventsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -183,6 +181,20 @@ Resources:
             Path: /events
             Method: POST
 
+  UpdateEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/updateEvent.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        UpdateEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /events/{eventId}
+            Method: PUT
+
   DeleteEventFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -197,7 +209,7 @@ Resources:
             Path: /events/{eventId}
             Method: DELETE
 
-  # Submission Service Functions
+  # Lambda Functions - Submission Management
   CreateSubmissionFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -243,7 +255,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
-            Path: /submissions/user/{userId}
+            Path: /submissions/user/{email}
             Method: GET
 
   UpdateSubmissionFunction:
@@ -274,7 +286,19 @@ Resources:
             Path: /submissions/stats
             Method: GET
 
-  
+  DeleteSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/deleteSubmission.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        DeleteSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /submissions/{submissionId}
+            Method: DELETE
 
   # Cognito User Pool
   UserPool:
@@ -349,9 +373,9 @@ Resources:
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
-                  - dynamodb:Query
                   - dynamodb:Scan
-                Resource: 
+                  - dynamodb:Query
+                Resource:
                   - !GetAtt UsersTable.Arn
                   - !GetAtt EventsTable.Arn
                   - !GetAtt SubmissionsTable.Arn
@@ -360,7 +384,7 @@ Resources:
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
-    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod"
   
   UserPoolId:
     Description: Cognito User Pool ID
@@ -369,4 +393,3 @@ Outputs:
   UserPoolClientId:
     Description: Cognito User Pool Client ID
     Value: !Ref UserPoolClient
-

@@ -1,17 +1,18 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, GetCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand } = require('@aws-sdk/lib-dynamodb');
 
 const client = new DynamoDBClient();
 const dynamoDB = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
   try {
-    const userId = event.pathParameters.userId;
+    const email = event.pathParameters.email;
     
+    // Get user by email (primary key)
     const params = {
       TableName: process.env.USERS_TABLE,
       Key: {
-        userId: userId
+        email: email
       }
     };
     
@@ -20,6 +21,9 @@ exports.handler = async (event) => {
     if (!result.Item) {
       return {
         statusCode: 404,
+        headers: {
+          'Access-Control-Allow-Origin': '*'
+        },
         body: JSON.stringify({ message: 'User not found' })
       };
     }
@@ -35,6 +39,9 @@ exports.handler = async (event) => {
     console.error(error);
     return {
       statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      },
       body: JSON.stringify({ message: 'Internal server error' })
     };
   }

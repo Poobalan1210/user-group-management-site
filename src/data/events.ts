@@ -21,7 +21,7 @@ export interface Event {
   date: string;
   eventType: 'builders_skill_sprint' | 'virtual_event';
   tags?: string[];
-  challengeFormSchema?: string; // New: ID of the selected form schema
+  challengeFormSchema?: string;
   meetupLink?: string;
   checkpoints: Checkpoint[];
   resources: Resource[];

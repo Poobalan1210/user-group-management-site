@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { h, resolveComponent } from "vue";
+import { h, resolveComponent, ref, onMounted } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import type { Participant, Submission } from '../types';
-import { useLeaderboardData } from '../composables/useLeaderboardData';
+import { useLeaderboardStore } from '../stores/leaderboardStore';
 
-const { data, expanded, globalFilter, getDetailData } = useLeaderboardData();
+const leaderboardStore = useLeaderboardStore();
+const expanded = ref({});
+const globalFilter = ref("");
+
+onMounted(() => {
+  leaderboardStore.fetchLeaderboardData();
+});
+
+function getDetailData(row: any) {
+  return row.submissions || [];
+}
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
@@ -26,11 +36,6 @@ const columns: TableColumn<Participant>[] = [
         },
         onClick: () => row.toggleExpanded(),
       }),
-  },
-  {
-    accessorKey: "rank",
-    header: "Rank",
-    cell: ({ row }) => `#${row.getValue("rank")}`,
   },
   {
     accessorKey: "name",
@@ -62,7 +67,7 @@ const columns: TableColumn<Participant>[] = [
         size: "xs",
         icon: "i-lucide-external-link",
         label: "View Profile",
-        to: `/profile/${row.original.id}`,
+        to: `/profile/${encodeURIComponent(row.original.email)}`,
       });
     },
   },
@@ -129,12 +134,23 @@ const detailColumns: TableColumn<Submission>[] = [
   <div>
     <div class="flex justify-between items-center mb-4">
       <h3 class="font-bold text-2xl">Leaderboard</h3>
-      <UInput v-model="globalFilter" class="max-w-sm" placeholder="Search" />
+      <UInput v-model="globalFilter" class="max-w-sm" placeholder="Search" :disabled="leaderboardStore.isLoading" />
     </div>
-    <div class="border-1 border-gray-700 rounded-lg p-1 overflow-hidden">
+    
+    <div v-if="leaderboardStore.isLoading" class="text-center py-8">
+      <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-500 mx-auto mb-4"></div>
+      <p class="text-gray-600">Loading leaderboard...</p>
+    </div>
+    
+    <div v-else-if="leaderboardStore.error" class="text-center py-8">
+      <UIcon name="i-lucide-alert-circle" class="text-4xl text-red-400 mx-auto mb-4" />
+      <p class="text-red-600 mb-4">{{ leaderboardStore.error }}</p>
+    </div>
+    
+    <div v-else class="border-1 border-gray-700 rounded-lg p-1 overflow-hidden">
       <UTable
         v-model:expanded="expanded"
-        :data="data"
+        :data="leaderboardStore.data"
         :columns="columns"
         v-model:global-filter="globalFilter"
         :ui="{

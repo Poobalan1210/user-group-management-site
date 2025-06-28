@@ -71,5 +71,10 @@ export const SubmissionService = {
   // Get submission statistics (admin only)
   getSubmissionStats: async (): Promise<SubmissionStats> => {
     return await apiGet<SubmissionStats>('/submissions/stats');
+  },
+  
+  // Delete a submission (admin only)
+  deleteSubmission: async (submissionId: string): Promise<void> => {
+    return await apiDelete<void>(`/submissions/${submissionId}`);
   }
 };

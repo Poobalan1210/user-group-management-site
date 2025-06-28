@@ -6,7 +6,7 @@ const dynamoDB = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
   try {
-    const userId = event.pathParameters?.userId;
+    const email = event.pathParameters?.email;
     const status = event.queryStringParameters?.status;
     const eventTitle = event.queryStringParameters?.eventTitle;
     
@@ -14,9 +14,9 @@ exports.handler = async (event) => {
     let expressionAttributeValues = {};
     
     // Build filter expressions based on parameters
-    if (userId) {
-      filterExpressions.push('submittedBy = :userId');
-      expressionAttributeValues[':userId'] = userId;
+    if (email) {
+      filterExpressions.push('submittedBy = :email');
+      expressionAttributeValues[':email'] = email;
     }
     
     if (status) {

@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
 const { v4: uuidv4 } = require('uuid');
 
 const client = new DynamoDBClient();
@@ -43,23 +43,22 @@ exports.handler = async (event) => {
     // Update user's submission count in the users table
     try {
       if (body.submittedBy) {
-        // Find user by email
+        // Find user by email (now primary key)
         const userParams = {
           TableName: process.env.USERS_TABLE,
-          FilterExpression: 'email = :email',
-          ExpressionAttributeValues: {
-            ':email': body.submittedBy
+          Key: {
+            email: body.submittedBy
           }
         };
         
-        const userResult = await dynamoDB.send(new ScanCommand(userParams));
+        const userResult = await dynamoDB.send(new GetCommand(userParams));
         
-        if (userResult.Items && userResult.Items.length > 0) {
+        if (userResult.Item) {
           // User found, update their pending submission count
-          const user = userResult.Items[0];
+          const user = userResult.Item;
           
           // We'll increment the total submissions count when the submission is approved
-          console.log(`User found: ${user.userId}, updating pending submissions count`);
+          console.log(`User found: ${user.email}, updating pending submissions count`);
         }
       }
     } catch (userError) {

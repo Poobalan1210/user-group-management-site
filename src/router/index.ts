@@ -21,10 +21,10 @@ const routes = [
     meta: { title: 'Events' }
   },
   {
-    path: '/admin',
-    name: 'Admin',
+    path: '/dashboard',
+    name: 'Dashboard',
     component: Admin,
-    meta: { title: 'Admin', requiresAdmin: true }
+    meta: { title: 'Dashboard', requiresAdmin: true }
   },
   {
     path: '/profile/:id',

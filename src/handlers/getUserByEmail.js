@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, GetCommand } = require('@aws-sdk/lib-dynamodb');
 
 const client = new DynamoDBClient();
 const dynamoDB = DynamoDBDocumentClient.from(client);
@@ -10,15 +10,14 @@ exports.handler = async (event) => {
     
     const params = {
       TableName: process.env.USERS_TABLE,
-      FilterExpression: 'email = :email',
-      ExpressionAttributeValues: {
-        ':email': email
+      Key: {
+        email: email
       }
     };
     
-    const result = await dynamoDB.send(new ScanCommand(params));
+    const result = await dynamoDB.send(new GetCommand(params));
     
-    if (!result.Items || result.Items.length === 0) {
+    if (!result.Item) {
       return {
         statusCode: 404,
         headers: {
@@ -35,7 +34,7 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
       },
-      body: JSON.stringify(result.Items[0])
+      body: JSON.stringify(result.Item)
     };
   } catch (error) {
     console.error('Get user by email error:', error);

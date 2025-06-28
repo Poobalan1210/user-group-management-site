@@ -85,25 +85,24 @@ exports.handler = async (event) => {
     // If submission is approved, update user's total points and submissions count
     if (body.status === 'approved' && body.points) {
       try {
-        // Get the user by email
+        // Get the user by email (now primary key)
         const userParams = {
           TableName: process.env.USERS_TABLE,
-          FilterExpression: 'email = :email',
-          ExpressionAttributeValues: {
-            ':email': existingSubmission.Item.submittedBy
+          Key: {
+            email: existingSubmission.Item.submittedBy
           }
         };
         
-        const userResult = await dynamoDB.send(new ScanCommand(userParams));
+        const userResult = await dynamoDB.send(new GetCommand(userParams));
         
-        if (userResult.Items && userResult.Items.length > 0) {
-          const user = userResult.Items[0];
+        if (userResult.Item) {
+          const user = userResult.Item;
           
           // Update user's points and submission count
           const updateUserParams = {
             TableName: process.env.USERS_TABLE,
             Key: {
-              userId: user.userId
+              email: user.email
             },
             UpdateExpression: 'set totalPoints = totalPoints + :points, totalSubmissions = totalSubmissions + :count, updatedAt = :updatedAt',
             ExpressionAttributeValues: {
