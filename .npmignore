@@ -1,0 +1,12 @@
+# Be very selective about what gets included in the layer
+*
+!package.json
+!package-lock.json
+
+# Include only the specific node_modules needed by your functions
+!node_modules/aws-sdk/
+!node_modules/uuid/
+!node_modules/@aws-sdk/
+
+# Add other essential dependencies as needed, but keep it minimal
+# Example: !node_modules/lodash/

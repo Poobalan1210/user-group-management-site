@@ -1,0 +1,11 @@
+{
+  "name": "lambda-functions",
+  "version": "1.0.0",
+  "description": "Lambda functions for user group management",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.835.0",
+    "@aws-sdk/lib-dynamodb": "^3.835.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {}
+}

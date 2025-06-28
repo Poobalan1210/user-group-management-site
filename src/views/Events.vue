@@ -4,6 +4,10 @@ import { events } from '../data/events';
 import type { Event } from '../data/events';
 import EventCard from '../components/EventCard.vue';
 import EventForm from '../components/EventForm.vue';
+import { apiPost } from '../api/api';
+import { useAdmin } from '../composables/useAdmin';
+
+const { isAdmin } = useAdmin();
 
 const showCreateForm = ref(false);
 const localEvents = ref([...events]);
@@ -18,8 +22,10 @@ const pastEvents = computed(() => {
   return localEvents.value.filter(event => event.status === 'past');
 });
 
-const handleCreateEvent = (newEvent: Event) => {
+const handleCreateEvent = async (newEvent: Event) => {
+  const createdEvent = await apiPost<Event>('/events', newEvent);
   localEvents.value.unshift(newEvent);
+  console.log('Event created:', newEvent);
   showCreateForm.value = false;
   document.body.style.overflow = "";
 };
@@ -56,7 +62,7 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
   <div class="container mx-auto p-4">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">Events</h1>
-      <div class="flex gap-2">
+      <div v-if="isAdmin" class="flex gap-2">
         <UButton color="primary" @click="openCreateForm('builders_skill_sprint')">
           <UIcon name="i-heroicons-plus" class="mr-1" />
           Create Skill Sprint

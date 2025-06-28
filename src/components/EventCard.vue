@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { Event } from '../data/events';
+import { useAdmin } from '../composables/useAdmin';
 
 const props = defineProps<{
   event: Event;
@@ -9,6 +10,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'edit', event: Event): void;
 }>();
+
+const { isAdmin } = useAdmin();
 
 const isExpanded = ref(false);
 const showResources = ref(false);
@@ -100,6 +103,7 @@ const sortedCheckpoints = computed(() => {
         </div>
         <div class="flex items-center gap-2">
           <UButton
+            v-if="isAdmin"
             size="xs"
             :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
             variant="ghost"

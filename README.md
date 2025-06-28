@@ -1,22 +1,59 @@
-# Vue 3 + Vite + Nuxt UI 3
+# User Group Management Site
 
-This template should help get you started developing with Vue 3, TypeScript, Vite and [Nuxt UI v3](https://ui3.nuxt.dev).
+A serverless application for managing AWS user groups, events, and member contributions.
 
-Online demo: https://nuxt-ui-vue-starter.pages.dev
+## Setup
 
-[![nuxt ui with vue 3 only](https://github.com/user-attachments/assets/a81af231-b2aa-4753-86c1-2c8802196a4b)](https://nuxt-ui-vue-starter.pages.dev)
+### 1. Deploy Cognito User Pool
 
-## Recommended IDE Setup
+Deploy the Cognito User Pool using the CloudFormation template:
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+```bash
+aws cloudformation deploy \
+  --template-file cognito-user-pool.yaml \
+  --stack-name user-group-management-auth \
+  --capabilities CAPABILITY_IAM
+```
 
-## Type Support For `.vue` Imports in TS
+### 2. Get Cognito User Pool details
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+```bash
+aws cloudformation describe-stacks \
+  --stack-name user-group-management-auth \
+  --query "Stacks[0].Outputs"
+```
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+### 3. Update .env file
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+Create a `.env` file in the root directory with the following content:
+
+```
+VITE_AWS_REGION=us-east-1
+VITE_USER_POOL_ID=<UserPoolId from CloudFormation output>
+VITE_USER_POOL_CLIENT_ID=<UserPoolClientId from CloudFormation output>
+VITE_COGNITO_DOMAIN=<CognitoDomain from CloudFormation output>
+VITE_API_ENDPOINT=<API Gateway endpoint>
+VITE_ADMIN_EMAILS=admin@example.com,another-admin@example.com
+```
+
+> Note: The `VITE_ADMIN_EMAILS` variable contains a comma-separated list of email addresses that will have admin privileges.
+
+### 4. Install dependencies
+
+```bash
+npm install
+```
+
+### 5. Run the application
+
+```bash
+npm run dev
+```
+
+## Features
+
+- User authentication with AWS Cognito
+- User profile with name, email, LinkedIn URL, and GitHub URL
+- Event management
+- Member contributions tracking
+- Leaderboard

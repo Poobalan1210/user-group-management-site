@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { navigationItems } from '../data/navigation';
+import { ref, computed } from 'vue';
+import { getNavigationItems } from '../data/navigation';
+import LoginButton from './LoginButton.vue';
 
 const isMobileMenuOpen = ref(false);
+const navigationItems = computed(() => getNavigationItems());
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
@@ -23,10 +25,13 @@ const toggleMobileMenu = () => {
       </div>
 
       <!-- Desktop Navigation - Hidden on mobile -->
-      <div class="hidden md:block">
+      <div class="hidden md:flex items-center">
         <UNavigationMenu
           :items="navigationItems"
         />
+        <div class="ml-4">
+          <LoginButton />
+        </div>
       </div>
 
       <!-- Hamburger icon for mobile -->
@@ -77,6 +82,11 @@ const toggleMobileMenu = () => {
           <span v-if="item.icon" class="inline-block mr-2" :class="item.icon"></span>
           {{ item.label }}
         </router-link>
+        
+        <!-- Login button in mobile menu -->
+        <div class="py-2 px-4">
+          <LoginButton />
+        </div>
       </div>
     </div>
   </div>

@@ -110,16 +110,23 @@ const submissionColumns: TableColumn<Submission>[] = [
   },
 ];
 
-// Mock social links (these would come from the user data in a real app)
+// Get social links from user data or generate fallbacks
 const socialLinks = computed(() => {
   if (!user.value) return {
     github: '#',
     linkedin: '#'
   };
   
+  // Try to get from user attributes if available
+  const githubUrl = user.value.attributes?.['custom:githuburl'] || 
+                    `https://github.com/${user.value.name.toLowerCase().replace(' ', '')}`;
+  
+  const linkedinUrl = user.value.attributes?.['custom:linkedinurl'] || 
+                      `https://linkedin.com/in/${user.value.name.toLowerCase().replace(' ', '-')}`;
+  
   return {
-    github: `https://github.com/${user.value.name.toLowerCase().replace(' ', '')}`,
-    linkedin: `https://linkedin.com/in/${user.value.name.toLowerCase().replace(' ', '-')}`
+    github: githubUrl,
+    linkedin: linkedinUrl
   };
 });
 </script>

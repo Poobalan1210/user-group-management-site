@@ -1,0 +1,266 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: SAM template for Nuxt UI Vue application backend
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 30
+    MemorySize: 128
+    Environment:
+      Variables:
+        USERS_TABLE: !Ref UsersTable
+        EVENTS_TABLE: !Ref EventsTable
+    AutoPublishAlias: live
+    # Package each function individually with only its required dependencies
+    CodeUri: ./src/
+
+Resources:
+  # API Gateway
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+
+  # DynamoDB Tables
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: users
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  EventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: events
+      AttributeDefinitions:
+        - AttributeName: eventId
+          AttributeType: S
+        - AttributeName: date
+          AttributeType: S
+      KeySchema:
+        - AttributeName: eventId
+          KeyType: HASH
+        - AttributeName: date
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  # Lambda Functions
+  # User Management Functions
+  CreateUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/createUser.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        CreateUser:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /users
+            Method: POST
+
+  GetUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getUser.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetUser:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /users/{userId}
+            Method: GET
+
+  GetUserByEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getUserByEmail.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetUserByEmail:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /users/email/{email}
+            Method: GET
+
+  GetAllUsersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getAllUsers.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetAllUsers:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /users
+            Method: GET
+
+  UpdateUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/updateUser.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        UpdateUser:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /users/{userId}
+            Method: PUT
+
+  GetEventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getEvents.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /events
+            Method: GET
+
+  CreateEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/createEvent.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        CreateEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /events
+            Method: POST
+
+  DeleteEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/deleteEvent.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /events/{eventId}
+            Method: DELETE
+
+  
+
+  # Cognito User Pool
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: UserGroupManagementUserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: linkedinurl
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: githuburl
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+
+  # Cognito User Pool Client
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: user-group-management-client
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      SupportedIdentityProviders:
+        - COGNITO
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+      PreventUserExistenceErrors: ENABLED
+
+  # IAM Roles and Policies
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: 
+                  - !GetAtt UsersTable.Arn
+                  - !GetAtt EventsTable.Arn
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod
+  
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+    
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient
+    
