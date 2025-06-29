@@ -13,6 +13,9 @@ Globals:
         USERS_TABLE: !Ref UsersTable
         EVENTS_TABLE: !Ref EventsTable
         SUBMISSIONS_TABLE: !Ref SubmissionsTable
+        REDEMPTIONS_TABLE: !Ref RedemptionsTable
+        REDEMPTION_EMAIL_QUEUE_URL: !Ref RedemptionEmailQueue
+        SENDER_EMAIL: "dipigom256@ofacer.com"  # Replace with your verified SES email
     AutoPublishAlias: live
     CodeUri: ./src/
 
@@ -80,6 +83,40 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
+
+  # New Redemptions Table
+  RedemptionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: redemptions
+      AttributeDefinitions:
+        - AttributeName: redemptionId
+          AttributeType: S
+        - AttributeName: userEmail
+          AttributeType: S
+        - AttributeName: redemptionDate
+          AttributeType: S
+      KeySchema:
+        - AttributeName: redemptionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserEmailIndex
+          KeySchema:
+            - AttributeName: userEmail
+              KeyType: HASH
+            - AttributeName: redemptionDate
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # SQS Queue for Redemption Emails
+  RedemptionEmailQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: redemption-email-queue
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 1209600  # 14 days
 
   # S3 Bucket for Image Storage
   ImagesBucket:
@@ -338,6 +375,63 @@ Resources:
             Path: /submissions/{submissionId}
             Method: DELETE
 
+  # Lambda Functions - Redemption Management
+  CreateRedemptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/createRedemption.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        CreateRedemption:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /redemptions
+            Method: POST
+
+  GetAllRedemptionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getAllRedemptions.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetAllRedemptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /redemptions
+            Method: GET
+
+  GetUserRedemptionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getUserRedemptions.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetUserRedemptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /redemptions/user/{email}
+            Method: GET
+
+  # Lambda Function for sending redemption emails
+  SendRedemptionEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/sendRedemptionEmail.handler
+      CodeUri: src/
+      Role: !GetAtt EmailLambdaExecutionRole.Arn
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt RedemptionEmailQueue.Arn
+            BatchSize: 1
+
   # Lambda Function - Image Upload
   UploadImageFunction:
     Type: AWS::Serverless::Function
@@ -435,7 +529,9 @@ Resources:
                   - !GetAtt UsersTable.Arn
                   - !GetAtt EventsTable.Arn
                   - !GetAtt SubmissionsTable.Arn
+                  - !GetAtt RedemptionsTable.Arn
                   - !Sub "${SubmissionsTable.Arn}/index/*"
+                  - !Sub "${RedemptionsTable.Arn}/index/*"
         - PolicyName: S3Access
           PolicyDocument:
             Version: '2012-10-17'
@@ -451,6 +547,40 @@ Resources:
                 Action:
                   - s3:ListBucket
                 Resource: !GetAtt ImagesBucket.Arn
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:GetQueueUrl
+                Resource: !GetAtt RedemptionEmailQueue.Arn
+
+  # Special role for email sending Lambda with SES permissions
+  EmailLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+      Policies:
+        - PolicyName: SESAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: "*"
 
 Outputs:
   ApiEndpoint:
@@ -472,3 +602,7 @@ Outputs:
   ImagesBucketUrl:
     Description: S3 Bucket URL for images
     Value: !Sub "https://${ImagesBucket}.s3.${AWS::Region}.amazonaws.com"
+    
+  RedemptionEmailQueueUrl:
+    Description: SQS Queue URL for redemption emails
+    Value: !Ref RedemptionEmailQueue

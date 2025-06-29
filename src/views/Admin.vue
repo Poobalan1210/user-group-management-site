@@ -4,10 +4,12 @@ import { SubmissionService } from '../services/submissionService';
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
+const USelectMenu = resolveComponent("USelectMenu");
 
-// State for submissions and loading state
+// State for submissions and loading states
 const submissions = ref([]);
 const isLoading = ref(true);
+const isSaving = ref(false);
 const stats = ref({
   totalSubmissions: 0,
   pendingSubmissions: 0,
@@ -64,6 +66,7 @@ onMounted(async () => {
 // Function to update a submission
 const updateSubmission = async (submission) => {
   try {
+    isSaving.value = true;
     const submissionId = submission.originalSubmissionId;
     if (!submissionId) {
       console.error('Missing submission ID for update');
@@ -88,16 +91,10 @@ const updateSubmission = async (submission) => {
       // This allows for historical tracking and user profile display
     }
     
-    // Show success message
-    if (window.$toast) {
-      window.$toast.add({
-        title: 'Success',
-        description: `Submission ${submission.adminReview.status.toLowerCase()} successfully`,
-        color: 'green'
-      });
-    } else {
-      alert(`Submission ${submission.adminReview.status.toLowerCase()} successfully`);
-    }
+    // Page will refresh, no need for toast
+    
+    // Refresh the page
+    window.location.reload();
   } catch (error) {
     console.error('Error updating submission:', error);
     
@@ -111,6 +108,8 @@ const updateSubmission = async (submission) => {
     } else {
       alert('Failed to update submission');
     }
+  } finally {
+    isSaving.value = false;
   }
 };
 
@@ -190,7 +189,14 @@ const columns = [
         </div>
         
         <div class="border-1 border-gray-700 rounded-lg p-1 overflow-hidden">
+          <!-- Loading spinner -->
+          <div v-if="isLoading" class="py-12">
+            <UIcon name="i-heroicons-arrow-path" class="text-4xl animate-spin mx-auto mb-4" />
+            <p class="text-center text-gray-500">Loading submissions...</p>
+          </div>
+          
           <UTable
+            v-else
             :columns="columns"
             :data="submissions"
             v-model:expanded="expanded"
@@ -270,15 +276,34 @@ const columns = [
                   <div>
                     <h3 class="text-lg font-semibold mb-2 text-primary-600 dark:text-primary-400">Your Review</h3>
                     <div>
-                      <div class="mb-4">
-                        <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Points</label>
-                        <UInput
-                          v-model.number="row.original.adminReview.points"
-                          type="number"
-                          min="0"
-                          max="100"
-                        />
+                      <!-- Points and Status side by side -->
+                      <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Points</label>
+                          <UInput
+                            v-model.number="row.original.adminReview.points"
+                            type="number"
+                            min="0"
+                            max="100"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Status</label>
+                          <USelectMenu
+                            v-model="row.original.adminReview.status"
+                            :items="[
+                              'Approved',
+                              'Rejected'
+                            ]"
+                            placeholder="Select status"
+                            :ui="{
+                              option: { container: { active: 'bg-primary-500 text-white' } }
+                            }"
+                          />
+                        </div>
                       </div>
+                      
+                      <!-- Feedback below -->
                       <div class="mb-4">
                         <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Feedback</label>
                         <UTextarea
@@ -287,31 +312,16 @@ const columns = [
                           placeholder="Enter your feedback for the submission..."
                         />
                       </div>
-                      <div class="flex justify-between gap-4 mt-6">
-                        <div class="flex gap-2">
-                          <UButton
-                            color="error"
-                            variant="soft"
-                            @click="row.original.adminReview.status = 'Rejected'"
-                          >
-                            Reject
-                          </UButton>
-                          <UButton
-                            color="success"
-                            variant="soft"
-                            @click="row.original.adminReview.status = 'Approved'"
-                          >
-                            Accept
-                          </UButton>
-                        </div>
-                        <UButton
-                          color="primary"
-                          @click="updateSubmission(row.original)"
-                          :loading="isLoading"
-                        >
-                          Save Changes
-                        </UButton>
-                      </div>
+                      
+                      <!-- Save changes button -->
+                      <UButton
+                        color="primary"
+                        @click="updateSubmission(row.original)"
+                        :loading="isSaving"
+                        class="mt-4"
+                      >
+                        Save Changes
+                      </UButton>
                     </div>
                   </div>
                 </div>

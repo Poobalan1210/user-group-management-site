@@ -4,6 +4,7 @@ import Events from '../views/Events.vue'
 import Admin from '../views/Admin.vue'
 import Profile from '../views/Profile.vue'
 import Auth from '../views/Auth.vue'
+import Store from '../views/Store.vue'
 import { useAdmin } from '../composables/useAdmin'
 import { useAuthStore } from '../auth/authStore'
 
@@ -38,6 +39,13 @@ const routes = [
     component: Auth,
     meta: { title: 'Authentication', requiresGuest: true }
   },
+  {
+    path: '/store',
+    name: 'Store',
+    component: Store,
+    meta: { title: 'Rewards Store' }
+  },
+  // Store Admin is now integrated into the Dashboard
   {
     path: '/:pathMatch(.*)*',
     redirect: '/'

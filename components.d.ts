@@ -20,6 +20,7 @@ declare module 'vue' {
     LoginForm: typeof import('./src/components/LoginForm.vue')['default']
     NavBar: typeof import('./src/components/NavBar.vue')['default']
     PhotoUpload: typeof import('./src/components/PhotoUpload.vue')['default']
+    RedemptionModal: typeof import('./src/components/RedemptionModal.vue')['default']
     RichTextDisplay: typeof import('./src/components/RichTextDisplay.vue')['default']
     RichTextEditor: typeof import('./src/components/RichTextEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -44,7 +45,9 @@ declare module 'vue' {
     UNavigationMenu: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/NavigationMenu.vue')['default']
     UProgress: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Progress.vue')['default']
     USelect: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Select.vue')['default']
+    USelectMenu: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/SelectMenu.vue')['default']
     UTable: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Table.vue')['default']
+    UTabs: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Tabs.vue')['default']
     UTextarea: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Textarea.vue')['default']
   }
 }

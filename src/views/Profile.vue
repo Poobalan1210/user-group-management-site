@@ -3,6 +3,7 @@ import { useRoute } from 'vue-router';
 import { computed, ref, h, resolveComponent, onMounted } from 'vue';
 import { UserService } from '../services/userService';
 import { SubmissionService } from '../services/submissionService';
+import { RedemptionService } from '../services/redemptionService';
 import type { TableColumn } from "@nuxt/ui";
 import type { Submission } from '../types';
 import type { User } from '../services/userService';
@@ -12,8 +13,10 @@ const email = decodeURIComponent(route.params.id as string);
 const searchQuery = ref('');
 const user = ref<User | null>(null);
 const userSubmissions = ref<Submission[]>([]);
+const userRedemptions = ref([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+const activeTab = ref('submissions'); // 'submissions' or 'redemptions'
 
 // Load user data and submissions
 const loadUserData = async () => {
@@ -39,6 +42,16 @@ const loadUserData = async () => {
                sub.status === 'rejected' ? 'Rejected' : 'Pending') as 'Approved' | 'Pending' | 'Rejected',
       url: sub.formData?.githubUrl || sub.formData?.projectUrl || sub.formData?.articleUrl || sub.formData?.materialsUrl || '#'
     }));
+    
+    // Get user's redemptions
+    try {
+      const redemptions = await RedemptionService.getUserRedemptions(userData.email);
+      userRedemptions.value = redemptions;
+    } catch (redemptionError) {
+      console.error('Error loading redemptions:', redemptionError);
+      // Continue with user profile even if redemptions fail to load
+      userRedemptions.value = [];
+    }
   } catch (err) {
     console.error('Error loading user data:', err);
     error.value = 'Failed to load user profile';
@@ -148,6 +161,45 @@ const submissionColumns: TableColumn<Submission>[] = [
   },
 ];
 
+// Define columns for redemptions table
+const redemptionColumns = [
+  {
+    accessorKey: "redemptionDate",
+    header: "Date",
+    cell: ({ row }) => {
+      return new Date(row.getValue("redemptionDate")).toLocaleString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    },
+  },
+  {
+    accessorKey: "productName",
+    header: "Product",
+  },
+  {
+    accessorKey: "points",
+    header: "Points",
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const status = row.getValue("status") as string;
+      const color = {
+        "pending": "warning" as const,
+        "processed": "info" as const,
+        "shipped": "primary" as const,
+        "delivered": "success" as const,
+        "cancelled": "error" as const,
+      }[status] || "warning";
+
+      return h(UBadge, { variant: "subtle", color }, () => status);
+    },
+  },
+];
+
 // Get social links from user data or generate fallbacks
 const socialLinks = computed(() => {
   if (!user.value) return {
@@ -160,11 +212,16 @@ const socialLinks = computed(() => {
     linkedin: user.value.linkedinUrl || '#'
   };
 });
+
+// Format date helper
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleString();
+};
 </script>
 
 <template>
   <div v-if="isLoading" class="container mx-auto px-4 py-8 text-center">
-    <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500 mx-auto"></div>
+    <UIcon name="i-heroicons-arrow-path" class="text-4xl animate-spin mx-auto mb-4" />
     <p class="mt-4 text-gray-600">Loading user profile...</p>
   </div>
   
@@ -247,30 +304,84 @@ const socialLinks = computed(() => {
       </div>
     </div>
 
-    <!-- All Submissions -->
+    <!-- Tabs for Submissions and Redemptions -->
     <div class="mb-8">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-bold">All Submissions</h2>
-        <UInput v-model="searchQuery" placeholder="Search submissions" icon="i-lucide-search" class="max-w-xs" />
+      <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
+        <nav class="flex space-x-8">
+          <button
+            @click="activeTab = 'submissions'"
+            class="py-4 px-1 border-b-2 font-medium text-sm"
+            :class="activeTab === 'submissions' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+          >
+            Submissions
+          </button>
+          <button
+            @click="activeTab = 'redemptions'"
+            class="py-4 px-1 border-b-2 font-medium text-sm"
+            :class="activeTab === 'redemptions' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+          >
+            Redemptions
+          </button>
+        </nav>
       </div>
       
-      <UTable
-        :columns="submissionColumns"
-        :data="allSubmissions"
-        v-model:global-filter="searchQuery"
-        :ui="{
-          base: 'overflow-hidden border-2 border-gray-300 dark:border-gray-700 rounded-lg shadow',
-          thead: 'bg-gray-50 dark:bg-gray-800',
-          th: 'border-b border-gray-200 dark:border-gray-700 text-lg',
-          td: 'border-b border-gray-200 dark:border-gray-700 text-lg',
-        }"
-      >
-        <template #empty>
-          <div class="text-center p-4 text-gray-500">
-            No submissions found
-          </div>
-        </template>
-      </UTable>
+      <!-- Submissions Tab -->
+      <div v-if="activeTab === 'submissions'">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold">All Submissions</h2>
+          <UInput v-model="searchQuery" placeholder="Search submissions" icon="i-lucide-search" class="max-w-xs" />
+        </div>
+        
+        <UTable
+          :columns="submissionColumns"
+          :data="allSubmissions"
+          v-model:global-filter="searchQuery"
+          :ui="{
+            base: 'overflow-hidden border-2 border-gray-300 dark:border-gray-700 rounded-lg shadow',
+            thead: 'bg-gray-50 dark:bg-gray-800',
+            th: 'border-b border-gray-200 dark:border-gray-700 text-lg',
+            td: 'border-b border-gray-200 dark:border-gray-700 text-lg',
+          }"
+        >
+          <template #empty>
+            <div class="text-center p-4 text-gray-500">
+              No submissions found
+            </div>
+          </template>
+        </UTable>
+      </div>
+      
+      <!-- Redemptions Tab -->
+      <div v-if="activeTab === 'redemptions'">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold">Redemption History</h2>
+        </div>
+        
+        <div v-if="userRedemptions.length === 0" class="text-center p-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <UIcon name="i-heroicons-shopping-bag" class="text-4xl mx-auto mb-4 text-gray-400" />
+          <h3 class="text-lg font-medium mb-2">No Redemptions Yet</h3>
+          <p class="text-gray-500 mb-4">You haven't redeemed any rewards yet.</p>
+          <UButton to="/store" color="primary">Visit Store</UButton>
+        </div>
+        
+        <UTable
+          v-else
+          :columns="redemptionColumns"
+          :data="userRedemptions"
+          :ui="{
+            base: 'overflow-hidden border-2 border-gray-300 dark:border-gray-700 rounded-lg shadow',
+            thead: 'bg-gray-50 dark:bg-gray-800',
+            th: 'border-b border-gray-200 dark:border-gray-700 text-lg',
+            td: 'border-b border-gray-200 dark:border-gray-700 text-lg',
+          }"
+        >
+          <template #empty>
+            <div class="text-center p-4 text-gray-500">
+              No redemptions found
+            </div>
+          </template>
+        </UTable>
+      </div>
     </div>
   </div>
   <div v-else class="container mx-auto px-4 py-8 text-center">

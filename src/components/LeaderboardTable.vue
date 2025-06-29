@@ -138,7 +138,7 @@ const detailColumns: TableColumn<Submission>[] = [
     </div>
     
     <div v-if="leaderboardStore.isLoading" class="text-center py-8">
-      <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-500 mx-auto mb-4"></div>
+      <UIcon name="i-heroicons-arrow-path" class="text-4xl animate-spin mx-auto mb-4" />
       <p class="text-gray-600">Loading leaderboard...</p>
     </div>
     

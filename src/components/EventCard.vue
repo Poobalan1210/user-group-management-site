@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import type { Event } from '../data/events';
 import { useAdmin } from '../composables/useAdmin';
 import { useAuthStore } from '../auth/authStore';
-import { SubmissionService } from '../services/submissionService';
+import { SubmissionService, type ChallengeSubmission } from '../services/submissionService';
 import ChallengeForm from './ChallengeForm.vue';
 import RichTextDisplay from './RichTextDisplay.vue';
 
@@ -22,6 +22,8 @@ const showResources = ref(false);
 const showChallengeForm = ref(false);
 const showChallengeModal = ref(false);
 const activeCheckpoint = ref<number | null>(null);
+const hasSubmitted = ref(false);
+const isCheckingSubmission = ref(false);
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value;
@@ -63,6 +65,9 @@ const handleChallengeSubmit = async (data: any) => {
 
     // Submit the challenge using the submission service
     await SubmissionService.submitChallenge(submission);
+    
+    // Update submission status
+    hasSubmitted.value = true;
 
     // Show success message using toast (if available) or alert
     if (window.$toast) {
@@ -156,6 +161,37 @@ const eventYoutubeVideoId = computed(() => {
     return props.event.checkpoints[0].youtubeVideoId;
   }
   return '';
+});
+
+// Check if the user has already submitted a challenge for this event
+const checkUserSubmission = async () => {
+  const authStore = useAuthStore();
+  if (!authStore.isAuthenticated || !props.event.challengeFormSchema) {
+    return;
+  }
+  
+  const userEmail = authStore.user?.attributes?.email;
+  if (!userEmail) {
+    return;
+  }
+  
+  try {
+    isCheckingSubmission.value = true;
+    const userSubmissions = await SubmissionService.getUserSubmissions(userEmail);
+    hasSubmitted.value = userSubmissions.some(submission => 
+      submission.eventTitle === props.event.title && 
+      submission.schemaId === props.event.challengeFormSchema
+    );
+  } catch (error) {
+    console.error('Error checking user submissions:', error);
+  } finally {
+    isCheckingSubmission.value = false;
+  }
+};
+
+// Check for existing submissions when component mounts
+onMounted(() => {
+  checkUserSubmission();
 });
 
 // Debug: Log event data when component mounts
@@ -328,8 +364,16 @@ if (props.event.eventType === 'virtual_event' && props.event.checkpoints && prop
               <div v-if="event.challengeFormSchema">
                 <p class="mb-2">Submit your completed challenge:</p>
                 <div v-if="useAuthStore().isAuthenticated">
-                  <UButton block color="primary" icon="i-heroicons-document-text" @click="openChallengeModal">
-                    Submit Challenge
+                  <UButton 
+                    block 
+                    color="primary" 
+                    icon="i-heroicons-document-text" 
+                    @click="openChallengeModal"
+                    :disabled="hasSubmitted || isCheckingSubmission"
+                  >
+                    <span v-if="isCheckingSubmission">Checking submission status...</span>
+                    <span v-else-if="hasSubmitted">Already Submitted</span>
+                    <span v-else>Submit Challenge</span>
                   </UButton>
                 </div>
                 <div v-else>

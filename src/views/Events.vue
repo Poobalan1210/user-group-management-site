@@ -68,12 +68,12 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
 
 <template>
   <div class="container mx-auto p-4">
-    <div class="flex justify-between items-center mb-6">
+    <div v-if="eventStore.isLoading" class="flex flex-col items-center justify-center h-64">
+      <UIcon name="i-heroicons-arrow-path" class="text-4xl animate-spin mb-4" />
+      <span class="text-sm text-gray-600">Loading events...</span>
+    </div>
+    <div v-else class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">Events</h1>
-      <div v-if="eventStore.isLoading" class="flex items-center">
-        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500 mr-2"></div>
-        <span class="text-sm text-gray-600">Loading events...</span>
-      </div>
       <div v-if="isAdmin" class="flex gap-2">
         <UButton color="primary" @click="openCreateForm('builders_skill_sprint')">
           <UIcon name="i-heroicons-plus" class="mr-1" />
@@ -86,57 +86,59 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
       </div>
     </div>
 
-    <!-- Event Form Modal -->
-    <EventForm 
-      :is-open="showCreateForm"
-      :default-event-type="eventTypeToCreate"
-      :event-to-edit="eventToEdit"
-      @event-created="handleCreateEvent" 
-      @event-updated="handleUpdateEvent"
-      @cancel="cancelCreate" 
-    />
+    <div v-if="!eventStore.isLoading">
+      <!-- Event Form Modal -->
+      <EventForm 
+        :is-open="showCreateForm"
+        :default-event-type="eventTypeToCreate"
+        :event-to-edit="eventToEdit"
+        @event-created="handleCreateEvent" 
+        @event-updated="handleUpdateEvent"
+        @cancel="cancelCreate" 
+      />
 
-    <!-- Error Alert -->
-    <UAlert v-if="eventStore.error" color="error" class="mb-6" :title="eventStore.error" />
+      <!-- Error Alert -->
+      <UAlert v-if="eventStore.error" color="error" class="mb-6" :title="eventStore.error" />
 
-    <!-- Live Events Section -->
-    <div class="mb-8">
-      <div class="flex items-center mb-4">
-        <UIcon name="i-heroicons-bolt" class="text-yellow-500 mr-2" />
-        <h2 class="text-xl font-semibold">Live Events</h2>
+      <!-- Live Events Section -->
+      <div class="mb-8">
+        <div class="flex items-center mb-4">
+          <UIcon name="i-heroicons-bolt" class="text-yellow-500 mr-2" />
+          <h2 class="text-xl font-semibold">Live Events</h2>
+        </div>
+        
+        <div v-if="eventStore.liveEvents.length > 0" class="space-y-4">
+          <EventCard 
+            v-for="event in eventStore.liveEvents" 
+            :key="event.eventId" 
+            :event="event"
+            @edit="handleEditEvent" 
+          />
+        </div>
+        <UAlert v-else title="No Live Events" color="primary">
+          There are no live events at the moment.
+        </UAlert>
       </div>
-      
-      <div v-if="eventStore.liveEvents.length > 0" class="space-y-4">
-        <EventCard 
-          v-for="event in eventStore.liveEvents" 
-          :key="event.eventId" 
-          :event="event"
-          @edit="handleEditEvent" 
-        />
-      </div>
-      <UAlert v-else title="No Live Events" color="primary">
-        There are no live events at the moment.
-      </UAlert>
-    </div>
 
-    <!-- Past Events Section -->
-    <div>
-      <div class="flex items-center mb-4">
-        <UIcon name="i-heroicons-clock" class="text-gray-500 mr-2" />
-        <h2 class="text-xl font-semibold">Past Events</h2>
+      <!-- Past Events Section -->
+      <div>
+        <div class="flex items-center mb-4">
+          <UIcon name="i-heroicons-clock" class="text-gray-500 mr-2" />
+          <h2 class="text-xl font-semibold">Past Events</h2>
+        </div>
+        
+        <div v-if="eventStore.pastEvents.length > 0" class="space-y-4">
+          <EventCard 
+            v-for="event in eventStore.pastEvents" 
+            :key="event.eventId" 
+            :event="event"
+            @edit="handleEditEvent"
+          />
+        </div>
+        <UAlert v-else title="No Past Events" color="primary">
+          There are no past events to display.
+        </UAlert>
       </div>
-      
-      <div v-if="eventStore.pastEvents.length > 0" class="space-y-4">
-        <EventCard 
-          v-for="event in eventStore.pastEvents" 
-          :key="event.eventId" 
-          :event="event"
-          @edit="handleEditEvent"
-        />
-      </div>
-      <UAlert v-else title="No Past Events" color="primary">
-        There are no past events to display.
-      </UAlert>
     </div>
   </div>
 </template> 
