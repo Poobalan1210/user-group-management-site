@@ -52,8 +52,7 @@ const cancel = () => {
             </div>
           </div>
           
-          <UAlert v-if="redemptionError" color="error" class="mb-4">
-            {{ redemptionError }}
+          <UAlert v-if="redemptionError" color="error" :title=props.redemptionError class="mb-4">
           </UAlert>
           
           <div class="mb-6">

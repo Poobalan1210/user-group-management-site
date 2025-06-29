@@ -14,6 +14,7 @@ Globals:
         EVENTS_TABLE: !Ref EventsTable
         SUBMISSIONS_TABLE: !Ref SubmissionsTable
         REDEMPTIONS_TABLE: !Ref RedemptionsTable
+        CREDITS_VOUCHERS_TABLE: !Ref CreditsVouchersTable
         REDEMPTION_EMAIL_QUEUE_URL: !Ref RedemptionEmailQueue
         SENDER_EMAIL: "dipigom256@ofacer.com"  # Replace with your verified SES email
     AutoPublishAlias: live
@@ -41,6 +42,27 @@ Resources:
       KeySchema:
         - AttributeName: email
           KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      
+  CreditsVouchersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: credits_vouchers
+      AttributeDefinitions:
+        - AttributeName: code
+          AttributeType: S
+        - AttributeName: type
+          AttributeType: S
+      KeySchema:
+        - AttributeName: code
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: TypeIndex
+          KeySchema:
+            - AttributeName: type
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   EventsTable:
@@ -374,20 +396,48 @@ Resources:
             RestApiId: !Ref ApiGateway
             Path: /submissions/{submissionId}
             Method: DELETE
-
-  # Lambda Functions - Redemption Management
-  CreateRedemptionFunction:
+            
+  # Lambda Functions - Credits and Vouchers Management
+  UploadCreditsVouchersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/createRedemption.handler
+      Handler: handlers/uploadCreditsVouchers.handler
       CodeUri: src/
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
-        CreateRedemption:
+        UploadCreditsVouchers:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
-            Path: /redemptions
+            Path: /credits-vouchers/upload
+            Method: POST
+            
+  GetCreditsVouchersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getCreditsVouchers.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetCreditsVouchers:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /credits-vouchers
+            Method: GET
+            
+  RedeemCreditVoucherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/redeemCreditVoucher.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        RedeemCreditVoucher:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /credits-vouchers/redeem
             Method: POST
 
   GetAllRedemptionsFunction:
@@ -415,8 +465,8 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
-            Path: /redemptions/user/{email}
-            Method: GET
+            Path: /credits-vouchers/user
+            Method: POST
 
   # Lambda Function for sending redemption emails
   SendRedemptionEmailFunction:
@@ -530,8 +580,10 @@ Resources:
                   - !GetAtt EventsTable.Arn
                   - !GetAtt SubmissionsTable.Arn
                   - !GetAtt RedemptionsTable.Arn
+                  - !GetAtt CreditsVouchersTable.Arn
                   - !Sub "${SubmissionsTable.Arn}/index/*"
                   - !Sub "${RedemptionsTable.Arn}/index/*"
+                  - !Sub "${CreditsVouchersTable.Arn}/index/*"
         - PolicyName: S3Access
           PolicyDocument:
             Version: '2012-10-17'

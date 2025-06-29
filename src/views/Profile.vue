@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router';
 import { computed, ref, h, resolveComponent, onMounted } from 'vue';
 import { UserService } from '../services/userService';
 import { SubmissionService } from '../services/submissionService';
-import { RedemptionService } from '../services/redemptionService';
+import { creditsVouchersManager } from '../services/creditsVouchersManagerService';
 import type { TableColumn } from "@nuxt/ui";
 import type { Submission } from '../types';
 import type { User } from '../services/userService';
@@ -43,15 +43,8 @@ const loadUserData = async () => {
       url: sub.formData?.githubUrl || sub.formData?.projectUrl || sub.formData?.articleUrl || sub.formData?.materialsUrl || '#'
     }));
     
-    // Get user's redemptions
-    try {
-      const redemptions = await RedemptionService.getUserRedemptions(userData.email);
-      userRedemptions.value = redemptions;
-    } catch (redemptionError) {
-      console.error('Error loading redemptions:', redemptionError);
-      // Continue with user profile even if redemptions fail to load
-      userRedemptions.value = [];
-    }
+    // Get user's redemptions - temporarily using empty array until we migrate this functionality
+    userRedemptions.value = await creditsVouchersManager.getRedemptionsByUser(email) || [];
   } catch (err) {
     console.error('Error loading user data:', err);
     error.value = 'Failed to load user profile';
@@ -67,36 +60,7 @@ onMounted(() => {
 const UBadge = resolveComponent("UBadge");
 const UButton = resolveComponent("UButton");
 
-// Calculate achievement stats
-const achievements = computed(() => {
-  if (!user.value || !userSubmissions.value) return [];
-  
-  const submissions = userSubmissions.value;
-  const approvedSubmissions = submissions.filter(s => s.status === 'Approved');
-  
-  return [
-    {
-      name: 'Content Creator',
-      description: 'Published 5+ approved articles',
-      achieved: approvedSubmissions.filter(s => s.type === 'Article').length >= 5,
-    },
-    {
-      name: 'Project Master',
-      description: 'Completed 3+ approved projects',
-      achieved: approvedSubmissions.filter(s => s.type === 'Project').length >= 3,
-    },
-    {
-      name: 'Workshop Leader',
-      description: 'Conducted 2+ approved workshops',
-      achieved: approvedSubmissions.filter(s => s.type === 'Workshop').length >= 2,
-    },
-    {
-      name: 'Challenge Champion',
-      description: 'Completed 4+ approved challenges',
-      achieved: approvedSubmissions.filter(s => s.type === 'Challenge').length >= 4,
-    }
-  ];
-});
+
 
 // Get all submissions
 const allSubmissions = computed(() => {
@@ -177,27 +141,7 @@ const redemptionColumns = [
   {
     accessorKey: "productName",
     header: "Product",
-  },
-  {
-    accessorKey: "points",
-    header: "Points",
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as string;
-      const color = {
-        "pending": "warning" as const,
-        "processed": "info" as const,
-        "shipped": "primary" as const,
-        "delivered": "success" as const,
-        "cancelled": "error" as const,
-      }[status] || "warning";
-
-      return h(UBadge, { variant: "subtle", color }, () => status);
-    },
-  },
+  }
 ];
 
 // Get social links from user data or generate fallbacks
@@ -273,36 +217,7 @@ const formatDate = (dateString) => {
       </template>
     </UCard>
 
-    <!-- Achievements -->
-    <div class="mb-8">
-      <h2 class="text-2xl font-bold mb-4">Achievements</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <UCard 
-          v-for="achievement in achievements" 
-          :key="achievement.name"
-          :ui="{ 
-            body: 'p-0'
-          }"
-          :class="achievement.achieved ? 'border-primary-500 dark:border-primary-400' : 'border-gray-200 dark:border-gray-700'"
-        >
-          <div class="p-4 flex items-center gap-4" :class="achievement.achieved ? 'bg-primary-50 dark:bg-primary-900/20' : 'bg-gray-50 dark:bg-gray-800/50'">
-            <div :class="achievement.achieved ? 'bg-primary-100 dark:bg-primary-800 text-primary-500 dark:text-primary-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'" class="p-3 rounded-full">
-              <UIcon :name="achievement.achieved ? 'i-lucide-award' : 'i-lucide-circle'" class="text-xl" />
-            </div>
-            <div>
-              <h3 class="font-medium text-base">{{ achievement.name }}</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ achievement.description }}</p>
-            </div>
-          </div>
-          <div v-if="achievement.achieved" class="px-4 py-2 border-t border-primary-200 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-900/10 text-primary-600 dark:text-primary-300 text-sm font-medium">
-            Achieved
-          </div>
-          <div v-else class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">
-            Not yet achieved
-          </div>
-        </UCard>
-      </div>
-    </div>
+
 
     <!-- Tabs for Submissions and Redemptions -->
     <div class="mb-8">

@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../auth/authStore';
+import { useStoreItemsStore } from '../stores/storeItemsStore';
+import { creditsVouchersManager } from '../services/creditsVouchersManagerService';
 import { UserService } from '../services/userService';
-import { RedemptionService } from '../services/redemptionService';
+// RedemptionService is now handled by creditsVouchersManager
 import RedemptionModal from '../components/RedemptionModal.vue';
 
 const authStore = useAuthStore();
+const storeItemsStore = useStoreItemsStore();
+// We can also use creditsVouchersManager directly if needed
 const isLoading = ref(true);
 const userPoints = ref(0);
 const products = ref([
   {
     id: 'aws-credits',
-    name: 'AWS Credits',
+    name: '100$ AWS Credits',
     description: 'Get $100 AWS credits to use on your AWS account',
     image: 'https://d1.awsstatic.com/logos/aws-logo-lockups/poweredbyaws/PB_AWS_logo_RGB_stacked_REV_SQ.91cd4af40773cbfbd15577a3c2b8a346fe3e8fa2.png',
     points: 500,
@@ -20,7 +24,7 @@ const products = ref([
   },
   {
     id: 'certification-voucher',
-    name: 'AWS Certification Voucher',
+    name: '50% AWS Certification Voucher',
     description: 'Voucher for any AWS certification exam',
     image: 'https://d1.awsstatic.com/training-and-certification/certification-badges/AWS-Certified-Cloud-Practitioner_badge.634f8a21af2e0e956ed8905a72366146ba22b74c.png',
     points: 800,
@@ -117,14 +121,22 @@ const redeemProduct = async () => {
     const email = authStore.user.attributes?.email;
     if (!email) throw new Error('User email not found');
     
-    await RedemptionService.redeemProduct({
-      productId: selectedProduct.value.id,
-      productName: selectedProduct.value.name,
-      points: selectedProduct.value.points,
-      userEmail: email,
-      shippingInfo: needsShippingInfo.value ? shippingInfo.value : null,
-      redemptionDate: new Date().toISOString()
-    });
+    // Check if we need to redeem a credit or voucher
+    let redemptionResult;
+    if (selectedProduct.value.id === 'aws-credits') {
+      redemptionResult = await creditsVouchersManager.redeemCredit(email,selectedProduct.value.name);
+      if (!redemptionResult) {
+        throw new Error('No credits available for redemption');
+      }
+    } else if (selectedProduct.value.id === 'certification-voucher') {
+      redemptionResult = await creditsVouchersManager.redeemVoucher(email,selectedProduct.value.name);
+      if (!redemptionResult) {
+        throw new Error('No vouchers available for redemption');
+      }
+    }
+    
+    // Redemption is now fully handled by creditsVouchersManager
+    // No need to call RedemptionService.redeemProduct separately
     
     // Update user points locally
     userPoints.value -= selectedProduct.value.points;
@@ -133,7 +145,7 @@ const redeemProduct = async () => {
     redemptionSuccess.value = true;
   } catch (error) {
     console.error('Error redeeming product:', error);
-    redemptionError.value = 'Failed to redeem product. Please try again.';
+    redemptionError.value = error.message || 'Failed to redeem product. Please try again.';
   } finally {
     redemptionInProgress.value = false;
   }
@@ -144,9 +156,11 @@ const redeemProduct = async () => {
   <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-3xl font-bold">Rewards Store</h1>
-      <div v-if="authStore.isAuthenticated" class="flex items-center">
-        <UIcon name="i-heroicons-star" class="text-yellow-500 mr-2" />
-        <span class="text-xl font-semibold">{{ userPoints }} Points</span>
+      <div v-if="authStore.isAuthenticated" class="flex items-center space-x-4">
+        <div class="flex items-center">
+          <UIcon name="i-heroicons-currency-dollar" class="text-yellow-500 mr-2" />
+          <span class="text-xl font-semibold">{{ userPoints }} Points</span>
+        </div>
       </div>
     </div>
     

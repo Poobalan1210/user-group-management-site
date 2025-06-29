@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { h, resolveComponent, ref, onMounted } from 'vue';
 import { SubmissionService } from '../services/submissionService';
+import { useStoreItemsStore } from '../stores/storeItemsStore';
+import { creditsVouchersManager } from '../services/creditsVouchersManagerService';
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
@@ -115,6 +117,39 @@ const updateSubmission = async (submission) => {
 
 const globalFilter = ref("");
 const expanded = ref<Record<string, boolean>>({});
+
+// Store items
+const storeItemsStore = useStoreItemsStore();
+// We can also use creditsVouchersManager directly
+const creditsFile = ref<File | null>(null);
+const vouchersFile = ref<File | null>(null);
+
+// Handle file uploads
+const handleCreditsFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files.length > 0) {
+    creditsFile.value = input.files[0];
+  }
+};
+
+const handleVouchersFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files.length > 0) {
+    vouchersFile.value = input.files[0];
+  }
+};
+
+const uploadCreditsFile = async () => {
+  if (!creditsFile.value) return;
+  await creditsVouchersManager.processCreditsCSV(creditsFile.value);
+  creditsFile.value = null;
+};
+
+const uploadVouchersFile = async () => {
+  if (!vouchersFile.value) return;
+  await creditsVouchersManager.processVouchersCSV(vouchersFile.value);
+  vouchersFile.value = null;
+};
 
 const columns = [
   {
@@ -328,6 +363,138 @@ const columns = [
               </div>
             </template>
           </UTable>
+        </div>
+      </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-6">
+      <div>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-2xl">Store</h3>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Credits Management -->
+          <div class="border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 shadow">
+            <div class="flex justify-between items-center mb-4">
+              <h4 class="font-bold text-xl text-primary-600 dark:text-primary-400">Credits Management</h4>
+              <UButton 
+                color="primary" 
+                variant="ghost" 
+                icon="i-lucide-refresh-cw" 
+                @click="storeItemsStore.fetchCreditsVouchersCounts"
+                :loading="storeItemsStore.isLoading"
+                size="sm"
+              >
+                Refresh
+              </UButton>
+            </div>
+            
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-700 dark:text-gray-300">Available Credits:</span>
+                <UBadge color="primary" size="lg">{{ storeItemsStore.creditsCount.available }}</UBadge>
+              </div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-700 dark:text-gray-300">Redeemed Credits:</span>
+                <UBadge color="gray" size="lg">{{ storeItemsStore.creditsCount.redeemed }}</UBadge>
+              </div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-700 dark:text-gray-300">Total Credits:</span>
+                <UBadge color="blue" size="lg">{{ storeItemsStore.creditsCount.available + storeItemsStore.creditsCount.redeemed }}</UBadge>
+              </div>
+              
+              <div class="border-t border-gray-200 dark:border-gray-700 my-4"></div>
+              
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Upload Credits CSV</label>
+                <p class="text-xs text-gray-500 mb-2">CSV format: code,value</p>
+                
+                <div class="flex items-center space-x-2">
+                  <input 
+                    type="file" 
+                    accept=".csv" 
+                    @change="handleCreditsFileChange"
+                    class="block w-full text-sm text-gray-500
+                           file:mr-4 file:py-2 file:px-4
+                           file:rounded-md file:border-0
+                           file:text-sm file:font-semibold
+                           file:bg-primary-50 file:text-primary-700
+                           hover:file:bg-primary-100"
+                  />
+                  <UButton 
+                    color="primary" 
+                    :disabled="!creditsFile" 
+                    @click="uploadCreditsFile"
+                    :loading="storeItemsStore.isLoading"
+                  >
+                    Upload
+                  </UButton>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Vouchers Management -->
+          <div class="border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 shadow">
+            <div class="flex justify-between items-center mb-4">
+              <h4 class="font-bold text-xl text-primary-600 dark:text-primary-400">Vouchers Management</h4>
+              <UButton 
+                color="primary" 
+                variant="ghost" 
+                icon="i-lucide-refresh-cw" 
+                @click="storeItemsStore.fetchCreditsVouchersCounts"
+                :loading="storeItemsStore.isLoading"
+                size="sm"
+              >
+                Refresh
+              </UButton>
+            </div>
+            
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-700 dark:text-gray-300">Available Vouchers:</span>
+                <UBadge color="primary" size="lg">{{ storeItemsStore.vouchersCount.available }}</UBadge>
+              </div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-700 dark:text-gray-300">Redeemed Vouchers:</span>
+                <UBadge color="gray" size="lg">{{ storeItemsStore.vouchersCount.redeemed }}</UBadge>
+              </div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-700 dark:text-gray-300">Total Vouchers:</span>
+                <UBadge color="blue" size="lg">{{ storeItemsStore.vouchersCount.available + storeItemsStore.vouchersCount.redeemed }}</UBadge>
+              </div>
+              
+              <div class="border-t border-gray-200 dark:border-gray-700 my-4"></div>
+              
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Upload Vouchers CSV</label>
+                <p class="text-xs text-gray-500 mb-2">CSV format: code,description</p>
+                
+                <div class="flex items-center space-x-2">
+                  <input 
+                    type="file" 
+                    accept=".csv" 
+                    @change="handleVouchersFileChange"
+                    class="block w-full text-sm text-gray-500
+                           file:mr-4 file:py-2 file:px-4
+                           file:rounded-md file:border-0
+                           file:text-sm file:font-semibold
+                           file:bg-primary-50 file:text-primary-700
+                           hover:file:bg-primary-100"
+                  />
+                  <UButton 
+                    color="primary" 
+                    :disabled="!vouchersFile" 
+                    @click="uploadVouchersFile"
+                    :loading="storeItemsStore.isLoading"
+                  >
+                    Upload
+                  </UButton>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
