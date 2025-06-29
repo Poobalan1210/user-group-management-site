@@ -24,6 +24,8 @@ exports.handler = async (event) => {
         meetupLink: body.meetupLink || '',
         checkpoints: body.checkpoints || [],
         resources: body.resources || [],
+        posterImage: body.posterImage || '',
+        youtubeVideoId: body.youtubeVideoId || '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

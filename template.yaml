@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
-Description: SAM template for Nuxt UI Vue application backend
+Description: SAM template for User Group Management Site Backend
 
 Globals:
   Function:
@@ -80,6 +80,44 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
+
+  # S3 Bucket for Image Storage
+  ImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "user-group-management-images-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+            AllowedOrigins:
+              - "*"
+            ExposedHeaders: []
+
+
+  # S3 Bucket Policy for Public Read Access
+  ImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImagesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${ImagesBucket.Arn}/*"
 
   # Lambda Functions - User Management
   CreateUserFunction:
@@ -300,6 +338,24 @@ Resources:
             Path: /submissions/{submissionId}
             Method: DELETE
 
+  # Lambda Function - Image Upload
+  UploadImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/uploadImage.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          IMAGES_BUCKET_NAME: !Ref ImagesBucket
+      Events:
+        UploadImage:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /upload
+            Method: POST
+
   # Cognito User Pool
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -380,6 +436,21 @@ Resources:
                   - !GetAtt EventsTable.Arn
                   - !GetAtt SubmissionsTable.Arn
                   - !Sub "${SubmissionsTable.Arn}/index/*"
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:GetObject
+                  - s3:DeleteObject
+                Resource: !Sub "${ImagesBucket.Arn}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt ImagesBucket.Arn
 
 Outputs:
   ApiEndpoint:
@@ -393,3 +464,11 @@ Outputs:
   UserPoolClientId:
     Description: Cognito User Pool Client ID
     Value: !Ref UserPoolClient
+    
+  ImagesBucketName:
+    Description: S3 Bucket for storing images
+    Value: !Ref ImagesBucket
+    
+  ImagesBucketUrl:
+    Description: S3 Bucket URL for images
+    Value: !Sub "https://${ImagesBucket}.s3.${AWS::Region}.amazonaws.com"

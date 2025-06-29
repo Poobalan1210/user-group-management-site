@@ -14,7 +14,7 @@ export interface Resource {
 }
 
 export interface Event {
-  id: string;
+  eventId: string;
   title: string;
   description: string;
   status: 'live' | 'past';
@@ -25,11 +25,13 @@ export interface Event {
   meetupLink?: string;
   checkpoints: Checkpoint[];
   resources: Resource[];
+  posterImage?: string;
+  youtubeVideoId?: string;
 }
 
 export const events: Event[] = [
   {
-    id: '1',
+    eventId: '1',
     title: 'Serverless Hackathon 2023',
     description: 'Build and deploy serverless applications using AWS Lambda, Azure Functions, or Google Cloud Functions.',
     status: 'live',
@@ -42,7 +44,7 @@ export const events: Event[] = [
       {
         title: 'Project Submission',
         date: '2023-11-30',
-        description: 'Submit your project with documentation',
+        description: '🚀 **AWS User Group Madurai | Builders Skill Sprint – June Edition**: 📊 **Data Month**\n\n📍 **Checkpoint 1 – Data Engineering with AWS**\n\nKickstarting our Data Month this June 📅, Checkpoint 1 takes you deep into the world of AWS data pipelines! 🧠💡\n\nAs part of the Builders Skill Sprint 🛠️, this session will introduce you to the foundational concepts of data engineering and guide you through building scalable ⚙️, secure 🔐, and cost-effective 💰 data pipelines using AWS-native services.\n\n🎤 **Session Speaker**: DIPALI KULSHRESTHA\n🔗 **Meeting Link**: [Join Session](https://meet.zoho.in/vugd-cyr-nzn)\n📅 **Date**: June 1, 2025 | 🕙 **Time**: 11:00 AM IST\n\n🔍 **What you\'ll learn in Checkpoint 1**\n• The complete data lifecycle: ingest ➝ transform ➝ store ➝ analyze ➝ visualize\n• Hands-on with services like Amazon S3, Glue, Lambda, Redshift, Athena, and QuickSight\n• Real-world pipeline architectures and best practices for scalability and cost-efficiency\n• Bonus activities like mini-contests, polls, and social challenges during the session 🎯',
         meetupUrl: 'https://meetup.com/events/serverless-checkpoint1',
         posterImage: 'https://placehold.co/600x400?text=Project+Submission',
         youtubeVideoId: 'dQw4w9WgXcQ'
@@ -69,7 +71,7 @@ export const events: Event[] = [
     ]
   },
   {
-    id: '2',
+    eventId: '2',
     title: 'Vue.js Workshop',
     description: 'Learn the fundamentals of Vue.js and build a real-world application.',
     status: 'live',
@@ -77,6 +79,8 @@ export const events: Event[] = [
     eventType: 'virtual_event',
     tags: ['frontend', 'full-stack'],
     meetupLink: 'https://meetup.com/events/vue-workshop',
+    posterImage: 'https://placehold.co/600x400?text=Vue.js+Workshop',
+    youtubeVideoId: 'nhBVL41-_Cw',
     checkpoints: [],
     resources: [
       {
@@ -92,7 +96,7 @@ export const events: Event[] = [
     ]
   },
   {
-    id: '3',
+    eventId: '3',
     title: 'Web Performance Optimization',
     description: 'Learn techniques to optimize web application performance.',
     status: 'past',

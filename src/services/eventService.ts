@@ -12,6 +12,8 @@ export interface CreateEventRequest {
   meetupLink?: string;
   checkpoints: any[];
   resources: any[];
+  posterImage?: string;
+  youtubeVideoId?: string;
 }
 
 export interface UpdateEventRequest extends Partial<CreateEventRequest> {

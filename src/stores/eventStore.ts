@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Event } from '../data/events';
+import { events as localEvents } from '../data/events';
 import { EventService } from '../services/eventService';
 
 export const useEventStore = defineStore('events', () => {
@@ -33,20 +34,32 @@ export const useEventStore = defineStore('events', () => {
     try {
       isLoading.value = true;
       error.value = null;
-      const apiEvents = await EventService.getAllEvents();
       
-      const transformedEvents = apiEvents.map(event => ({
-        ...event,
-        id: event.eventId || event.id
-      }));
-      
-      events.value = transformedEvents;
-      lastFetch.value = Date.now();
-      return transformedEvents;
+      // Try to fetch from API first
+      try {
+        const apiEvents = await EventService.getAllEvents();
+        
+        events.value = apiEvents;
+        lastFetch.value = Date.now();
+        return apiEvents;
+      } catch (apiError) {
+        console.warn('API not available, using local events data:', apiError);
+        
+        // Fallback to local events data
+        events.value = localEvents;
+        lastFetch.value = Date.now();
+        return localEvents;
+      }
     } catch (err) {
       console.error('Error loading events:', err);
       error.value = 'Failed to load events';
-      throw err;
+      
+      // Even if there's an error, try to use local data as last resort
+      if (events.value.length === 0) {
+        events.value = localEvents;
+      }
+      
+      return events.value;
     } finally {
       isLoading.value = false;
     }
@@ -59,8 +72,15 @@ export const useEventStore = defineStore('events', () => {
   }
 
   async function updateEvent(eventId: string, updatedEvent: Event) {
-    const updated = await EventService.updateEvent(eventId, updatedEvent);
-    const index = events.value.findIndex(event => event.id === eventId);
+    const actualEventId = eventId || updatedEvent.eventId;
+    if (!actualEventId) {
+      throw new Error('No valid event ID provided for update');
+    }
+    
+    const updated = await EventService.updateEvent(actualEventId, updatedEvent);
+    const index = events.value.findIndex(event => 
+      event.eventId === actualEventId
+    );
     if (index !== -1) {
       events.value[index] = updated;
     }

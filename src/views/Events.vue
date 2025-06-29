@@ -31,10 +31,15 @@ const handleCreateEvent = async (newEvent: Event) => {
 
 const handleUpdateEvent = async (updatedEvent: Event) => {
   try {
-    await eventStore.updateEvent(updatedEvent.id, updatedEvent);
+    const eventId = eventToEdit.value?.eventId || updatedEvent.eventId;
+    if (!eventId) {
+      throw new Error('No valid event ID found for update');
+    }
+    
+    await eventStore.updateEvent(eventId, updatedEvent);
     showCreateForm.value = false;
     eventToEdit.value = undefined;
-    document.body.style.overflow = "";
+    document.body.style.overflow = "auto";
   } catch (error) {
     console.error('Error updating event:', error);
     alert('Failed to update event. Please try again.');
@@ -42,6 +47,8 @@ const handleUpdateEvent = async (updatedEvent: Event) => {
 };
 
 const handleEditEvent = (event: Event) => {
+  console.log('Editing event:', event);
+  console.log('Event ID:', event.eventId);
   eventToEdit.value = event;
   showCreateForm.value = true;
 };
@@ -102,7 +109,7 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
       <div v-if="eventStore.liveEvents.length > 0" class="space-y-4">
         <EventCard 
           v-for="event in eventStore.liveEvents" 
-          :key="event.id" 
+          :key="event.eventId" 
           :event="event"
           @edit="handleEditEvent" 
         />
@@ -122,7 +129,7 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
       <div v-if="eventStore.pastEvents.length > 0" class="space-y-4">
         <EventCard 
           v-for="event in eventStore.pastEvents" 
-          :key="event.id" 
+          :key="event.eventId" 
           :event="event"
           @edit="handleEditEvent"
         />

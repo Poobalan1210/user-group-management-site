@@ -95,6 +95,16 @@ exports.handler = async (event) => {
       expressionAttributeValues[':resources'] = body.resources;
     }
     
+    if (body.posterImage !== undefined) {
+      updateExpression += ', posterImage = :posterImage';
+      expressionAttributeValues[':posterImage'] = body.posterImage;
+    }
+    
+    if (body.youtubeVideoId !== undefined) {
+      updateExpression += ', youtubeVideoId = :youtubeVideoId';
+      expressionAttributeValues[':youtubeVideoId'] = body.youtubeVideoId;
+    }
+    
     const updateParams = {
       TableName: process.env.EVENTS_TABLE,
       Key: {

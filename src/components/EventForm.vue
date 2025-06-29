@@ -2,6 +2,8 @@
 import { ref, reactive, watch, computed, onUnmounted } from "vue";
 import type { Checkpoint, Resource, Event } from "../data/events";
 import { getFormSchemaOptions } from "../data/formSchemas";
+import RichTextEditor from './RichTextEditor.vue';
+import ImageUpload from './ImageUpload.vue';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -21,6 +23,18 @@ const isEditMode = computed(() => !!props.eventToEdit);
 // Initialize the form with the event to edit or with default values
 const initializeForm = () => {
   if (props.eventToEdit) {
+    // For virtual events, get media from first checkpoint if available
+    let posterImage = props.eventToEdit.posterImage || "";
+    let youtubeVideoId = props.eventToEdit.youtubeVideoId || "";
+    
+    // If it's a virtual event, check if media exists in the first checkpoint
+    if (props.eventToEdit.eventType === 'virtual_event' && 
+        props.eventToEdit.checkpoints && 
+        props.eventToEdit.checkpoints.length > 0) {
+      posterImage = posterImage || props.eventToEdit.checkpoints[0].posterImage || "";
+      youtubeVideoId = youtubeVideoId || props.eventToEdit.checkpoints[0].youtubeVideoId || "";
+    }
+    
     // Clone the event to edit
     return {
       title: props.eventToEdit.title,
@@ -33,7 +47,9 @@ const initializeForm = () => {
       meetupLink: props.eventToEdit.meetupLink || "",
       checkpoints: props.eventToEdit.checkpoints.map(cp => ({ ...cp })),
       resources: props.eventToEdit.resources.map(res => ({ ...res })),
-    } as Omit<Event, "id">;
+      posterImage,
+      youtubeVideoId,
+    } as Omit<Event, "eventId">;
   }
   
   // Default values for new event
@@ -49,10 +65,12 @@ const initializeForm = () => {
     meetupLink: "",
     checkpoints: [],
     resources: [],
-  } as Omit<Event, "id">;
+    posterImage: "",
+    youtubeVideoId: "",
+  } as Omit<Event, "eventId">;
 };
 
-const newEvent = reactive<Omit<Event, "id">>(initializeForm());
+const newEvent = reactive<Omit<Event, "eventId">>(initializeForm());
 
 // Watch for changes to isOpen prop
 watch(
@@ -68,15 +86,46 @@ watch(
         newEvent[key] = formValues[key];
       });
     } else {
-      document.body.style.overflow = ""; // Restore scrolling when modal is closed
+      document.body.style.overflow = "auto"; // Restore scrolling when modal is closed
     }
   },
   { immediate: true } // Run immediately to ensure proper initial state
 );
 
+// Watch for changes to eventToEdit prop to update form when editing
+watch(
+  () => props.eventToEdit,
+  (eventToEdit) => {
+    if (eventToEdit && props.isOpen) {
+      const formValues = initializeForm();
+      
+      // Debug logging for virtual events
+      if (eventToEdit.eventType === 'virtual_event') {
+        console.log('Editing virtual event:', eventToEdit.title);
+        console.log('Event poster image:', eventToEdit.posterImage);
+        console.log('Event YouTube ID:', eventToEdit.youtubeVideoId);
+        
+        if (eventToEdit.checkpoints && eventToEdit.checkpoints.length > 0) {
+          console.log('First checkpoint poster:', eventToEdit.checkpoints[0].posterImage);
+          console.log('First checkpoint YouTube:', eventToEdit.checkpoints[0].youtubeVideoId);
+        }
+        
+        console.log('Form values poster:', formValues.posterImage);
+        console.log('Form values YouTube:', formValues.youtubeVideoId);
+      }
+      
+      Object.keys(formValues).forEach(key => {
+        // @ts-ignore
+        newEvent[key] = formValues[key];
+      });
+    }
+  },
+  { immediate: true }
+);
+
 // Make sure scrolling is restored when component is unmounted
 onUnmounted(() => {
-  document.body.style.overflow = ""; // Restore scrolling
+  document.body.style.overflow = "auto"; // Restore scrolling
 });
 
 const newCheckpoint = reactive<Checkpoint>({
@@ -143,8 +192,16 @@ watch(
   () => newEvent.eventType,
   (newType) => {
     if (newType === "virtual_event") {
-      // Clear checkpoints for virtual events
-      newEvent.checkpoints = [];
+      // For virtual events, ensure we have at least one checkpoint to store media
+      if (newEvent.checkpoints.length === 0) {
+        newEvent.checkpoints = [{
+          title: "Virtual Event",
+          date: newEvent.date,
+          description: "Virtual event details",
+          posterImage: newEvent.posterImage || "",
+          youtubeVideoId: newEvent.youtubeVideoId || ""
+        }];
+      }
       newEvent.challengeFormSchema = "";
     } else if (newType === "builders_skill_sprint") {
       // Clear meetup link for builders skill sprint (only checkpoints have meetup links)
@@ -191,33 +248,69 @@ const removeResource = (index: number) => {
 
 const submitForm = () => {
   if (newEvent.title && newEvent.description && newEvent.date) {
+    // For virtual events, ensure media is stored in checkpoint
+    if (newEvent.eventType === "virtual_event") {
+      console.log('Submitting virtual event with poster:', newEvent.posterImage);
+      console.log('Submitting virtual event with YouTube ID:', newEvent.youtubeVideoId);
+      
+      // Create or update the first checkpoint with the media information
+      if (newEvent.checkpoints.length === 0) {
+        newEvent.checkpoints = [{
+          title: "Virtual Event",
+          date: newEvent.date,
+          description: "Virtual event details",
+          posterImage: newEvent.posterImage || "",
+          youtubeVideoId: newEvent.youtubeVideoId || ""
+        }];
+      } else {
+        // Update the first checkpoint with current media values
+        newEvent.checkpoints[0].posterImage = newEvent.posterImage || "";
+        newEvent.checkpoints[0].youtubeVideoId = newEvent.youtubeVideoId || "";
+      }
+      
+      console.log('Updated checkpoint poster:', newEvent.checkpoints[0].posterImage);
+      console.log('Updated checkpoint YouTube ID:', newEvent.checkpoints[0].youtubeVideoId);
+    }
+    
     if (isEditMode.value) {
       // Update existing event
       const updatedEvent: Event = {
         ...props.eventToEdit!,
         ...newEvent,
       };
-      document.body.style.overflow = ""; // Restore scrolling before emitting
+      
+      // For virtual events, ensure we're not losing checkpoint data
+      if (updatedEvent.eventType === 'virtual_event' && updatedEvent.checkpoints && updatedEvent.checkpoints.length > 0) {
+        console.log('Final checkpoint data before update:', updatedEvent.checkpoints[0]);
+      }
+      
+      document.body.style.overflow = "auto"; // Restore scrolling before emitting
       emit("event-updated", updatedEvent);
     } else {
       // Create new event
       const createdEvent: Event = {
         ...newEvent,
-        id: Date.now().toString(),
+        eventId: Date.now().toString(),
       };
-      document.body.style.overflow = ""; // Restore scrolling before emitting
+      
+      // For virtual events, ensure we're not losing checkpoint data
+      if (createdEvent.eventType === 'virtual_event' && createdEvent.checkpoints && createdEvent.checkpoints.length > 0) {
+        console.log('Final checkpoint data before creation:', createdEvent.checkpoints[0]);
+      }
+      
+      document.body.style.overflow = "auto"; // Restore scrolling before emitting
       emit("event-created", createdEvent);
     }
   }
 };
 
 const cancel = () => {
-  document.body.style.overflow = ""; // Ensure scrolling is restored
+  document.body.style.overflow = "auto"; // Ensure scrolling is restored
   emit("cancel");
 };
 
 const handleModalClose = () => {
-  document.body.style.overflow = ""; // Ensure scrolling is restored
+  document.body.style.overflow = "auto"; // Ensure scrolling is restored
   emit("cancel");
 };
 </script>
@@ -412,12 +505,13 @@ const handleModalClose = () => {
                         class="w-full dark-input mb-8"
                       />
 
-                      <UTextarea
-                        v-model="newCheckpoint.description"
-                        placeholder="Describe what will happen at this checkpoint"
-                        :rows="2"
-                        class="w-full dark-input mb-8"
-                      />
+                      <div class="mb-8">
+                        <label class="block text-sm font-medium mb-2 text-white">Checkpoint Description</label>
+                        <RichTextEditor
+                          v-model="newCheckpoint.description"
+                          placeholder="Describe what will happen at this checkpoint. Use **bold**, *italic*, • bullets, [links](url), and emojis 🚀"
+                        />
+                      </div>
 
                       <UInput
                         v-model="newCheckpoint.meetupUrl"
@@ -425,13 +519,15 @@ const handleModalClose = () => {
                         class="w-full dark-input mb-8"
                       />
 
-                      <UFormField label="Upload Poster Image">
-                        <UInput
+                      <div class="mb-8">
+                        <label class="block text-sm font-medium mb-2 text-white">Checkpoint Poster Image</label>
+                        <p class="text-xs text-gray-400 mb-2">Current value: {{ newCheckpoint.posterImage || 'None' }}</p>
+                        <ImageUpload
                           v-model="newCheckpoint.posterImage"
-                          type="file"
-                          class="w-full dark-input mb-8"
+                          placeholder="Upload checkpoint poster image"
+                          :folder="`events/${newEvent.title ? newEvent.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() : 'untitled'}/checkpoints`"
                         />
-                      </UFormField>
+                      </div>
 
                       <UButton
                         block
@@ -462,20 +558,24 @@ const handleModalClose = () => {
               </div>
 
               <div class="space-y-6">
-                <UFormField label="Event Poster Image">
-                  <UInput
-                    v-model="newCheckpoint.posterImage"
-                    type="file"
-                    class="w-full dark-input mb-8"
+                <div class="mb-8">
+                  <label class="block text-sm font-medium mb-2 text-info-500">Event Poster Image</label>
+                  <p class="text-xs text-gray-400 mb-2">Current value: {{ newEvent.posterImage || 'None' }}</p>
+                  <p class="text-xs text-amber-400 mb-2">Note: This will be stored in the first checkpoint for virtual events</p>
+                  <ImageUpload
+                    v-model="newEvent.posterImage"
+                    placeholder="Upload event poster image"
+                    :folder="`events/${newEvent.title ? newEvent.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() : 'untitled'}/poster`"
                   />
-                </UFormField>
+                </div>
 
                 <UFormField label="YouTube Video ID">
                   <UInput
-                    v-model="newCheckpoint.youtubeVideoId"
+                    v-model="newEvent.youtubeVideoId"
                     placeholder="e.g., dQw4w9WgXcQ"
                     class="w-full dark-input mb-8"
                   />
+                  <p class="text-xs text-amber-400 mb-2">Note: This will be stored in the first checkpoint for virtual events</p>
                 </UFormField>
               </div>
             </div>

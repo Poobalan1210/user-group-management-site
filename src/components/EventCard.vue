@@ -5,6 +5,7 @@ import { useAdmin } from '../composables/useAdmin';
 import { useAuthStore } from '../auth/authStore';
 import { SubmissionService } from '../services/submissionService';
 import ChallengeForm from './ChallengeForm.vue';
+import RichTextDisplay from './RichTextDisplay.vue';
 
 const props = defineProps<{
   event: Event;
@@ -111,7 +112,7 @@ const toggleCheckpointDetails = (index: number, e: MouseEvent) => {
 const handleEdit = (e: MouseEvent) => {
   e.stopPropagation();
   // Ensure scrolling is always enabled before emitting edit event
-  document.body.style.overflow = "";
+  document.body.style.overflow = "auto";
   emit('edit', props.event);
 };
 
@@ -136,6 +137,42 @@ const sortedCheckpoints = computed(() => {
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 });
+
+// Computed property to get the poster image from event or first checkpoint
+const eventPosterImage = computed(() => {
+  if (props.event.posterImage) {
+    return props.event.posterImage;
+  } else if (props.event.checkpoints && props.event.checkpoints.length > 0 && props.event.checkpoints[0].posterImage) {
+    return props.event.checkpoints[0].posterImage;
+  }
+  return '';
+});
+
+// Computed property to get the YouTube video ID from event or first checkpoint
+const eventYoutubeVideoId = computed(() => {
+  if (props.event.youtubeVideoId) {
+    return props.event.youtubeVideoId;
+  } else if (props.event.checkpoints && props.event.checkpoints.length > 0 && props.event.checkpoints[0].youtubeVideoId) {
+    return props.event.checkpoints[0].youtubeVideoId;
+  }
+  return '';
+});
+
+// Debug: Log event data when component mounts
+console.log('EventCard - Event data:', props.event);
+console.log('EventCard - Event ID:', props.event.eventId);
+console.log('EventCard - Event type:', props.event.eventType);
+console.log('EventCard - Poster image:', props.event.posterImage);
+console.log('EventCard - YouTube video ID:', props.event.youtubeVideoId);
+
+// Additional debug for virtual events with checkpoints
+if (props.event.eventType === 'virtual_event' && props.event.checkpoints && props.event.checkpoints.length > 0) {
+  console.log('EventCard - First checkpoint:', props.event.checkpoints[0]);
+  console.log('EventCard - Checkpoint poster image:', props.event.checkpoints[0].posterImage);
+  console.log('EventCard - Checkpoint YouTube ID:', props.event.checkpoints[0].youtubeVideoId);
+  console.log('EventCard - Computed poster image:', eventPosterImage.value);
+  console.log('EventCard - Computed YouTube ID:', eventYoutubeVideoId.value);
+}
 
 
 
@@ -165,10 +202,8 @@ const sortedCheckpoints = computed(() => {
 
     <div v-if="isExpanded">
       <UCardBody>
-        <p class="mb-4">{{ event.description }}</p>
-
         <!-- Event Type and Tags -->
-        <div class="mb-4">
+        <div class="mb-4 mt-4">
           <div class="flex flex-wrap gap-2 items-center mb-2">
             <span class="text-sm font-medium">Tags:</span>
             <div v-if="event.tags && event.tags.length > 0" class="flex flex-wrap gap-2 items-center">
@@ -183,29 +218,38 @@ const sortedCheckpoints = computed(() => {
         <!-- Meetup Link - Only for Virtual Events -->
         <div v-if="event.eventType === 'virtual_event' && event.meetupLink" class="mb-6">
           <UButton size="sm" color="info" variant="outline" :to="event.meetupLink" target="_blank"
-            icon="i-heroicons-user-group">
-            Join Meetup
+            icon="i-heroicons-arrow-top-right-on-square" class="mr-2">
+            Register on Meetup
           </UButton>
         </div>
 
         <!-- Virtual Event Media -->
-        <div v-if="event.eventType === 'virtual_event' && event.checkpoints && event.checkpoints.length > 0"
-          class="mb-6">
+        <div v-if="event.eventType === 'virtual_event' && (eventPosterImage || eventYoutubeVideoId)" class="mb-6">
           <div class="media-container mb-4">
-            <!-- Poster Image -->
-            <div v-if="event.checkpoints[0].posterImage" class="aspect-video overflow-hidden">
-              <img :src="event.checkpoints[0].posterImage" :alt="`Poster for ${event.title}`"
-                class="w-full h-full object-contain rounded-lg shadow-sm" />
+            <!-- Poster Image - Use computed property that checks both event and checkpoints -->
+            <div v-if="eventPosterImage" class="w-full mb-4">
+              <div class="aspect-video w-full overflow-hidden rounded-lg shadow-sm bg-gray-100 dark:bg-gray-800">
+                <img :src="eventPosterImage" 
+                  :alt="`Poster for ${event.title}`" class="w-full h-full object-cover"
+                  @error="console.error('Failed to load poster image:', eventPosterImage)"
+                  @load="console.log('Poster image loaded successfully:', eventPosterImage)" />
+              </div>
             </div>
 
-            <!-- YouTube Video Embed -->
-            <div v-if="event.checkpoints[0].youtubeVideoId" class="aspect-video">
-              <iframe class="w-full h-full rounded-lg"
-                :src="`https://www.youtube.com/embed/${event.checkpoints[0].youtubeVideoId}`" frameborder="0"
+            <!-- YouTube Video Embed - Use computed property that checks both event and checkpoints -->
+            <div v-if="eventYoutubeVideoId" class="aspect-video">
+              <iframe class="w-full h-full rounded-lg" 
+                :src="`https://www.youtube.com/embed/${eventYoutubeVideoId}`"
+                frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen></iframe>
             </div>
           </div>
+        </div>
+        
+        <!-- Event Description -->
+        <div class="mb-4">
+          <RichTextDisplay :content="event.description" />
         </div>
 
         <!-- Checkpoints Section - Only for Builders Skill Sprint -->
@@ -232,13 +276,11 @@ const sortedCheckpoints = computed(() => {
 
               <!-- Expanded Checkpoint Details -->
               <div v-if="activeCheckpoint === index" class="mt-4 pt-4 border-t">
-                <p class="mb-4">{{ checkpoint.description }}</p>
-
                 <!-- Checkpoint Meetup Link -->
                 <div v-if="checkpoint.meetupUrl" class="mb-4">
                   <UButton size="sm" color="primary" :to="checkpoint.meetupUrl" target="_blank"
-                    icon="i-heroicons-user-group">
-                    Join Meetup
+                    icon="i-heroicons-arrow-top-right-on-square" class="mr-2">
+                    Register On Meetup
                   </UButton>
                 </div>
 
@@ -258,15 +300,18 @@ const sortedCheckpoints = computed(() => {
                       allowfullscreen></iframe>
                   </div>
                 </div>
+                
+                <!-- Checkpoint Description -->
+                <div class="mb-4">
+                  <RichTextDisplay :content="checkpoint.description" />
+                </div>
               </div>
             </UCard>
           </div>
         </div>
 
         <!-- Challenge Submission Section - Only for Builders Skill Sprint -->
-        <div
-          v-if="event.eventType === 'builders_skill_sprint' && (event.challengeFormSchema)"
-          class="mb-6">
+        <div v-if="event.eventType === 'builders_skill_sprint' && (event.challengeFormSchema)" class="mb-6">
           <h4 class="font-medium mb-3 flex items-center">
             <UIcon name="i-heroicons-document-check" class="mr-2 text-primary-500" />
             Challenge Submission
