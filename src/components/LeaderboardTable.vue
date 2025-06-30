@@ -86,10 +86,6 @@ const detailColumns: TableColumn<Submission>[] = [
     },
   },
   {
-    accessorKey: "name",
-    header: "Submission Name",
-  },
-  {
     accessorKey: "type",
     header: "Submission Type",
   },

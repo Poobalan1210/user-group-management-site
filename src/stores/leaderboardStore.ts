@@ -35,8 +35,7 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
         
         const submissions: Submission[] = userSubmissions.map(sub => ({
           date: sub.submittedAt,
-          name: sub.formData?.projectName || sub.formData?.title || sub.formData?.workshopTitle || 'Unnamed Submission',
-          type: (sub.submissionType || 'Challenge') as 'Article' | 'Project' | 'Challenge' | 'Workshop',
+          type: sub.eventTitle,
           points: sub.points || 0,
           status: (sub.status === 'approved' ? 'Approved' : 
                    sub.status === 'rejected' ? 'Rejected' : 'Pending') as 'Approved' | 'Pending' | 'Rejected',

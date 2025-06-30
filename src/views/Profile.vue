@@ -35,8 +35,7 @@ const loadUserData = async () => {
     // Transform submissions to match expected format
     userSubmissions.value = userSubs.map(sub => ({
       date: sub.submittedAt,
-      name: sub.formData?.projectName || sub.formData?.title || sub.formData?.workshopTitle || 'Unnamed Submission',
-      type: (sub.submissionType || 'Challenge') as 'Article' | 'Project' | 'Challenge' | 'Workshop',
+      type: (sub.eventTitle || 'Challenge') as 'Article' | 'Project' | 'Challenge' | 'Workshop',
       points: sub.points || 0,
       status: (sub.status === 'approved' ? 'Approved' : 
                sub.status === 'rejected' ? 'Rejected' : 'Pending') as 'Approved' | 'Pending' | 'Rejected',
@@ -81,12 +80,8 @@ const submissionColumns: TableColumn<Submission>[] = [
     },
   },
   {
-    accessorKey: "name",
-    header: "Name",
-  },
-  {
     accessorKey: "type",
-    header: "Type",
+    header: "Event Title",
     cell: ({ row }) => {
       return h(UBadge, { color: "primary", variant: "subtle" }, () => row.getValue("type"));
     },

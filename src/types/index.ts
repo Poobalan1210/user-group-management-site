@@ -1,7 +1,6 @@
 export type Submission = {
     date: string;
-    name: string;
-    type: 'Article' | 'Project' | 'Challenge' | 'Workshop';
+    type: string;
     points: number;
     status: 'Approved' | 'Pending' | 'Rejected';
     url: string;
