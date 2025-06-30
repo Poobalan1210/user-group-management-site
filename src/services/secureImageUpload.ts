@@ -4,7 +4,7 @@ class SecureImageUploadService {
   private apiEndpoint: string;
 
   constructor() {
-    this.apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '';
+    this.apiEndpoint = import.meta.env.API_ENDPOINT;
   }
 
   async uploadImage(file: File, folder: string = 'checkpoints'): Promise<string> {
