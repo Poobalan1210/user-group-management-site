@@ -1,11 +1,20 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
+const { getCorsHeaders } = require('../utils/cors');
 const { v4: uuidv4 } = require('uuid');
 
 const client = new DynamoDBClient();
 const dynamoDB = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: getCorsHeaders(),
+      body: ''
+    };
+  }
+
   try {
     const body = JSON.parse(event.body);
     const eventId = uuidv4();
@@ -35,20 +44,14 @@ exports.handler = async (event) => {
     
     return {
       statusCode: 201,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify(params.Item)
     };
   } catch (error) {
     console.error('Create event error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({ message: 'Internal server error' })
     };
   }

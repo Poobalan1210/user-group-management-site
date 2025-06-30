@@ -1,11 +1,20 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+const { getCorsHeaders } = require('../utils/cors');
 const { v4: uuidv4 } = require('uuid');
 
 const client = new DynamoDBClient();
 const dynamoDB = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: getCorsHeaders(),
+      body: ''
+    };
+  }
+
   try {
     const body = JSON.parse(event.body);
     const { type, items } = body;
@@ -13,11 +22,7 @@ exports.handler = async (event) => {
     if (!type || !items || !Array.isArray(items) || items.length === 0) {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-        },
+        headers: getCorsHeaders(),
         body: JSON.stringify({ message: 'Invalid request. Type and items array are required.' })
       };
     }
@@ -26,9 +31,7 @@ exports.handler = async (event) => {
     if (type !== 'credit' && type !== 'voucher') {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*'
-        },
+        headers: getCorsHeaders(),
         body: JSON.stringify({ message: 'Type must be either "credit" or "voucher"' })
       };
     }
@@ -90,11 +93,7 @@ exports.handler = async (event) => {
     
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({
         message: `Processed ${results.length} items with ${errors.length} errors`,
         results,
@@ -105,9 +104,7 @@ exports.handler = async (event) => {
     console.error('Upload credits/vouchers error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({ message: 'Internal server error' })
     };
   }

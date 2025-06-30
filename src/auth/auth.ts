@@ -7,9 +7,9 @@ export function configureAmplify() {
   Amplify.configure({
     Auth: {
       Cognito: {
-        region: import.meta.env.AWS_REGION || 'us-east-1',
-        userPoolId: import.meta.env.USER_POOL_ID,
-        userPoolClientId: import.meta.env.USER_POOL_CLIENT_ID,
+        region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+        userPoolId: import.meta.env.VITE_USER_POOL_ID,
+        userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
         // Remove OAuth configuration since we're using custom auth
         signUpVerificationMethod: 'code',
         userAttributes: {

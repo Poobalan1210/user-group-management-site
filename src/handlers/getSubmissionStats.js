@@ -1,5 +1,6 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { getCorsHeaders } = require('../utils/cors');
 
 const client = new DynamoDBClient();
 const dynamoDB = DynamoDBDocumentClient.from(client);
@@ -57,20 +58,14 @@ exports.handler = async (event) => {
     
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify(stats)
     };
   } catch (error) {
     console.error('Get submission stats error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({ message: 'Internal server error' })
     };
   }

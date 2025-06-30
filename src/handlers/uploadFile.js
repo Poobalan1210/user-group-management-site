@@ -1,20 +1,15 @@
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { getCorsHeaders } = require('../utils/cors');
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 
 exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-  };
-
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers,
-      body: '',
+      headers: getCorsHeaders(),
+      body: ''
     };
   }
 
@@ -24,8 +19,8 @@ exports.handler = async (event) => {
     if (!fileName || !fileType) {
       return {
         statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'fileName and fileType are required' }),
+        headers: getCorsHeaders(),
+        body: JSON.stringify({ error: 'fileName and fileType are required' })
       };
     }
 
@@ -43,18 +38,18 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers,
+      headers: getCorsHeaders(),
       body: JSON.stringify({
         presignedUrl,
-        imageUrl,
-      }),
+        imageUrl
+      })
     };
   } catch (error) {
     console.error('Error:', error);
     return {
       statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Failed to generate upload URL' }),
+      headers: getCorsHeaders(),
+      body: JSON.stringify({ error: 'Failed to generate upload URL' })
     };
   }
 };

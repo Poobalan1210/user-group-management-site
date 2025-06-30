@@ -1,10 +1,19 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, DeleteCommand, GetCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { getCorsHeaders } = require('../utils/cors');
 
 const client = new DynamoDBClient();
 const dynamoDB = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: getCorsHeaders(),
+      body: ''
+    };
+  }
+
   try {
     const eventId = event.pathParameters?.eventId;
     const date = event.queryStringParameters?.date;
@@ -12,11 +21,7 @@ exports.handler = async (event) => {
     if (!eventId) {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-        },
+        headers: getCorsHeaders(),
         body: JSON.stringify({ message: 'Missing eventId parameter' })
       };
     }
@@ -39,9 +44,7 @@ exports.handler = async (event) => {
       } else {
         return {
           statusCode: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*'
-          },
+          headers: getCorsHeaders(),
           body: JSON.stringify({ message: 'Event not found' })
         };
       }
@@ -59,19 +62,13 @@ exports.handler = async (event) => {
     
     return {
       statusCode: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-      }
+      headers: getCorsHeaders()
     };
   } catch (error) {
     console.error('Delete event error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({ message: 'Internal server error' })
     };
   }

@@ -1,18 +1,22 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, GetCommand, UpdateCommand, ScanCommand, PutCommand } = require('@aws-sdk/lib-dynamodb');
+const { getCorsHeaders } = require('../utils/cors');
 const { v4: uuidv4 } = require('uuid');
 const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
 
-// Initialize clients with region
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION
-});
+const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const dynamoDB = DynamoDBDocumentClient.from(client);
-const sqsClient = new SQSClient({
-  region: process.env.AWS_REGION
-});
+const sqsClient = new SQSClient({ region: process.env.AWS_REGION });
 
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: getCorsHeaders(),
+      body: ''
+    };
+  }
+
   try {
     const body = JSON.parse(event.body);
 
@@ -20,11 +24,7 @@ exports.handler = async (event) => {
     if (!body.userEmail) {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-        },
+        headers: getCorsHeaders(),
         body: JSON.stringify({ message: 'Missing required field: userEmail' })
       };
     }
@@ -74,11 +74,7 @@ exports.handler = async (event) => {
       if (!result.Items || result.Items.length === 0) {
         return {
           statusCode: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-          },
+          headers: getCorsHeaders(),
           body: JSON.stringify({ message: `No available items found for product: ${body.productName}` })
         };
       }
@@ -102,11 +98,7 @@ exports.handler = async (event) => {
       if (!getResult.Item) {
         return {
           statusCode: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-          },
+          headers: getCorsHeaders(),
           body: JSON.stringify({ message: `Code not found: ${body.code}` })
         };
       }
@@ -114,11 +106,7 @@ exports.handler = async (event) => {
       if (getResult.Item.isRedeemed) {
         return {
           statusCode: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-          },
+          headers: getCorsHeaders(),
           body: JSON.stringify({ message: `Code already redeemed: ${body.code}` })
         };
       }
@@ -127,11 +115,7 @@ exports.handler = async (event) => {
     } else {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-        },
+        headers: getCorsHeaders(),
         body: JSON.stringify({ message: 'Either code or productName must be provided' })
       };
     }
@@ -266,11 +250,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({
         message: 'Credit/voucher redeemed successfully',
         item: updatedItem
@@ -283,22 +263,14 @@ exports.handler = async (event) => {
     if (error.name === 'ConditionalCheckFailedException') {
       return {
         statusCode: 409,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-        },
+        headers: getCorsHeaders(),
         body: JSON.stringify({ message: 'This code has already been redeemed' })
       };
     }
 
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({
         message: 'Internal server error',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined

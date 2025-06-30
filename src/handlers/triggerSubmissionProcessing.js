@@ -1,8 +1,17 @@
 const { SFNClient, StartExecutionCommand } = require('@aws-sdk/client-sfn');
+const { getCorsHeaders } = require('../utils/cors');
 
 const sfnClient = new SFNClient();
 
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: getCorsHeaders(),
+      body: ''
+    };
+  }
+
   try {
     const body = JSON.parse(event.body);
     
@@ -33,11 +42,7 @@ exports.handler = async (event) => {
     
     return {
       statusCode: 202,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({
         message: 'Submission processing started',
         executionArn: result.executionArn,
@@ -48,9 +53,7 @@ exports.handler = async (event) => {
     console.error('Trigger submission processing error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: getCorsHeaders(),
       body: JSON.stringify({ 
         message: 'Failed to start submission processing',
         error: error.message 
