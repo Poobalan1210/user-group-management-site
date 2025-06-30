@@ -12,7 +12,7 @@ AWS User Groups and tech communities face significant challenges in managing mem
 - **Scalability Issues**: Traditional systems can't handle growing communities
 - **Administrative Overhead**: Complex manual processes for event and user management
 
-### Our Solution
+### Solution
 This serverless platform addresses these challenges by providing:
 - **AI-Powered Content Analysis**: Automated, consistent evaluation using Amazon Bedrock
 - **Intelligent Workflow Management**: Step Functions orchestrate complex processing
@@ -69,6 +69,32 @@ This application follows a serverless-first architecture pattern using AWS servi
 #### Infrastructure & Deployment Services
 11. **AWS SAM (Serverless Application Model)** - Primary deployment framework for this application
 12. **AWS CloudFormation** - Resource provisioning and stack management
+
+## 🎯 User and Admin Flows
+
+### User Flow
+![User Flow](./images/UserFlow.png)
+
+**User Journey:**
+1. **Registration/Login** → Cognito authentication with profile creation
+2. **Profile Setup** → Add LinkedIn/GitHub links and personal information
+3. **Browse Events** → View available community events and challenges
+4. **Submit Content** → Upload blog posts or video tutorials
+5. **Track Progress** → Monitor submission status and AI analysis results
+6. **Earn Points** → Receive points for approved submissions
+7. **Redeem Rewards** → Use points to claim credits and vouchers
+8. **View Leaderboard** → Check community ranking and achievements
+
+### Admin Flow
+![Admin Flow](./images/AdminFlow.png)
+
+**Admin Journey:**
+1. **Admin Login** → Enhanced access with administrative privileges
+2. **Event Management** → Create, update, and manage community events
+3. **Submission Review** → Review submissions with AI analysis insights
+4. **Manual Scoring** → Override AI scores and provide custom feedback
+5. **User Management** → Monitor user activity and manage accounts
+6. **Rewards Management** → Upload and manage credits/vouchers inventory
 
 ## 🚀 Features and Functionality
 
@@ -232,32 +258,6 @@ The submission processing leverages AWS Step Functions for intelligent workflow 
 5. **UpdateSubmissionWithAnalysis** - Updates record with AI scores and summary
 
 
-
-## 🎯 User and Admin Flows
-
-### User Flow
-![User Flow](./images/UserFlow.png)
-
-**User Journey:**
-1. **Registration/Login** → Cognito authentication with profile creation
-2. **Profile Setup** → Add LinkedIn/GitHub links and personal information
-3. **Browse Events** → View available community events and challenges
-4. **Submit Content** → Upload blog posts or video tutorials
-5. **Track Progress** → Monitor submission status and AI analysis results
-6. **Earn Points** → Receive points for approved submissions
-7. **Redeem Rewards** → Use points to claim credits and vouchers
-8. **View Leaderboard** → Check community ranking and achievements
-
-### Admin Flow
-![Admin Flow](./images/AdminFlow.png)
-
-**Admin Journey:**
-1. **Admin Login** → Enhanced access with administrative privileges
-2. **Event Management** → Create, update, and manage community events
-3. **Submission Review** → Review submissions with AI analysis insights
-4. **Manual Scoring** → Override AI scores and provide custom feedback
-5. **User Management** → Monitor user activity and manage accounts
-6. **Rewards Management** → Upload and manage credits/vouchers inventory
 
 ## 🔐 Authentication Implementation
 
