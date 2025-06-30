@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { AuthService } from '../auth/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_ENDPOINT || 'https://72rt0j7tf8.execute-api.us-east-1.amazonaws.com';
+const API_BASE_URL = import.meta.env.API_ENDPOINT || 'https://72rt0j7tf8.execute-api.us-east-1.amazonaws.com';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
