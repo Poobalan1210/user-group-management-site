@@ -3,7 +3,7 @@ import { useAuthStore } from '../auth/authStore';
 
 // Get admin emails from environment variable
 const adminEmailsString = import.meta.env.VITE_ADMIN_EMAILS || 'admin@example.com';
-const ADMIN_EMAILS = adminEmailsString.split(',');
+const ADMIN_EMAILS = adminEmailsString?.split(',');
 
 export function useAdmin() {
   const authStore = useAuthStore();
