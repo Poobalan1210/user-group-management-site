@@ -4,7 +4,7 @@ A comprehensive serverless web application built for managing AWS User Group act
 
 ## 🏗️ Architecture Overview
 
-![Architecture Diagram](/images/diagram-export-30-06-2025-17_02_48.png)
+![Architecture Diagram](/images/Architecture.png)
 
 This application follows a serverless architecture pattern using AWS services:
 
