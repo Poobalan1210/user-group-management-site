@@ -47,11 +47,11 @@ const columns: TableColumn<Participant>[] = [
   },
   {
     accessorKey: "totalSubmissions",
-    header: "Total Submissions",
+    header: "Total Approved Submissions",
   },
   {
     accessorKey: "totalPoints",
-    header: "Total Points",
+    header: "Available Points",
     cell: ({ row }) => {
       const points = Number.parseFloat(row.getValue("totalPoints"));
       return h("div", { class: "font-medium" }, points.toLocaleString());

@@ -26,21 +26,19 @@ onMounted(async () => {
     isLoading.value = true;
     
     // Get only pending submissions for admin review
-    const submissionsData = await SubmissionService.getAllSubmissions({ status: 'pending' });
+    const submissionsData = await SubmissionService.getAllSubmissions({ status: 'ai_analyzed' });
     submissions.value = submissionsData.map(submission => ({
       id: submission.submissionId,
-      name: submission.formData?.projectName || submission.formData?.title || 'Unnamed Submission',
       email: submission.submittedBy,
-      event: submission.eventTitle,
-      type: submission.submissionType || 'Challenge',
+      eventTitle: submission.eventTitle,
       date: submission.submittedAt,
       content: JSON.stringify(submission.formData),
-      link: submission.formData?.githubUrl || submission.formData?.projectUrl || submission.formData?.articleUrl || '#',
+      link: submission.formData?.projectUrl || '#',
       aiAnalysis: {
-        relevance: Math.floor(Math.random() * 30) + 70, // Mock data
-        quality: Math.floor(Math.random() * 30) + 70,   // Mock data
-        originality: Math.floor(Math.random() * 30) + 70, // Mock data
-        summary: 'This is an automatically generated summary of the submission content.'
+        relevance: submission.aiAnalysis?.relevance || 0,
+        quality: submission.aiAnalysis?.quality || 0,
+        originality: submission.aiAnalysis?.originality || 0,
+        summary: submission.aiAnalysis?.summary || 'No summary available'
       },
       adminReview: {
         points: submission.points || 0,
@@ -170,23 +168,15 @@ const columns = [
       }),
   },
   {
-    accessorKey: 'name',
-    header: 'Name',
-  },
-  {
     accessorKey: 'email',
     header: 'Email',
   },
   {
-    accessorKey: 'type',
-    header: 'Type',
+    accessorKey: 'eventTitle',
+    header: 'Event Title',
     cell: ({ row }: { row: any }) => {
-      return h(UBadge, { color: "primary", variant: "subtle" }, () => row.getValue("type"));
+      return h(UBadge, { color: "primary", variant: "subtle" }, () => row.getValue("eventTitle"));
     },
-  },
-  {
-    accessorKey: 'event',
-    header: 'Tag',
   },
   {
     accessorKey: 'date',
@@ -251,14 +241,10 @@ const columns = [
                   <div>
                     <h3 class="text-lg font-semibold mb-2 text-primary-600 dark:text-primary-400">Submission Details</h3>
                     <div class="grid grid-cols-2 gap-2 mb-3">
-                      <div class="font-medium text-gray-700 dark:text-gray-300">Name:</div>
-                      <div>{{ row.original.name }}</div>
                       <div class="font-medium text-gray-700 dark:text-gray-300">Email:</div>
                       <div>{{ row.original.email }}</div>
-                      <div class="font-medium text-gray-700 dark:text-gray-300">Type:</div>
-                      <div>{{ row.original.type }}</div>
                       <div class="font-medium text-gray-700 dark:text-gray-300">Event:</div>
-                      <div>{{ row.original.event }}</div>
+                      <div>{{ row.original.eventTitle }}</div>
                       <div class="font-medium text-gray-700 dark:text-gray-300">Date:</div>
                       <div>{{ new Date(row.original.date).toLocaleString() }}</div>
                     </div>

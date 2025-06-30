@@ -5,209 +5,105 @@ export interface FormSchema {
   schema: any[];
 }
 
+export interface FormSchema {
+  id: string;
+  name: string;
+  description: string;
+  schema: any[];
+}
+
 export const formSchemas: FormSchema[] = [
   {
-    id: 'basic-submission',
-    name: 'Basic Submission Form',
-    description: 'Simple form for basic challenge submissions',
-    schema: [
-      {
-        $formkit: 'text',
-        name: 'title',
-        label: 'Submission Title',
-        placeholder: 'Enter your submission title',
-        validation: 'required',
-      },
-      {
-        $formkit: 'textarea',
-        name: 'description',
-        label: 'Description',
-        placeholder: 'Describe your submission',
-        validation: 'required',
-        rows: 4,
-      },
-      {
-        $formkit: 'url',
-        name: 'projectUrl',
-        label: 'Project URL',
-        placeholder: 'https://github.com/your-project',
-        validation: 'required|url',
-      }
-    ]
-  },
-  {
-    id: 'project-submission',
-    name: 'Project Submission Form',
-    description: 'Detailed form for project submissions',
-    schema: [
-      {
-        $formkit: 'text',
-        name: 'projectName',
-        label: 'Project Name',
-        placeholder: 'Enter your project name',
-        validation: 'required',
-      },
-      {
-        $formkit: 'textarea',
-        name: 'description',
-        label: 'Project Description',
-        placeholder: 'Describe your project in detail',
-        validation: 'required',
-        rows: 5,
-      },
-      {
-        $formkit: 'select',
-        name: 'category',
-        label: 'Project Category',
-        options: [
-          'Web Application',
-          'Mobile App',
-          'API/Backend',
-          'DevOps/Infrastructure',
-          'Machine Learning',
-          'Other'
-        ],
-        validation: 'required',
-      },
-      {
-        $formkit: 'url',
-        name: 'githubUrl',
-        label: 'GitHub Repository',
-        placeholder: 'https://github.com/username/repo',
-        validation: 'required|url',
-      },
-      {
-        $formkit: 'url',
-        name: 'liveUrl',
-        label: 'Live Demo URL (Optional)',
-        placeholder: 'https://your-demo.com',
-        validation: 'url',
-      }
-    ]
-  },
-  {
-    id: 'article-submission',
-    name: 'Article Submission Form',
-    description: 'Form for submitting technical articles',
-    schema: [
-      {
-        $formkit: 'text',
-        name: 'title',
-        label: 'Article Title',
-        placeholder: 'Enter your article title',
-        validation: 'required',
-      },
-      {
-        $formkit: 'textarea',
-        name: 'summary',
-        label: 'Article Summary',
-        placeholder: 'Brief summary of your article',
-        validation: 'required',
-        rows: 3,
-      },
-      {
-        $formkit: 'select',
-        name: 'platform',
-        label: 'Publishing Platform',
-        options: [
-          'Medium',
-          'Dev.to',
-          'Personal Blog',
-          'LinkedIn',
-          'Hashnode',
-          'Other'
-        ],
-        validation: 'required',
-      },
-      {
-        $formkit: 'url',
-        name: 'articleUrl',
-        label: 'Article URL',
-        placeholder: 'https://medium.com/@you/article',
-        validation: 'required|url',
-      },
-      {
-        $formkit: 'select',
-        name: 'topics',
-        label: 'Topics Covered',
-        options: [
-          'AWS Services',
-          'Serverless',
-          'Frontend Development',
-          'Backend Development',
-          'DevOps',
-          'Machine Learning',
-          'Best Practices',
-          'Tutorial'
-        ],
-        multiple: true,
-      },
-      {
-        $formkit: 'submit',
-        label: 'Submit Article'
-      }
-    ]
-  },
-  {
-    id: 'workshop-submission',
-    name: 'Workshop Submission Form',
-    description: 'Form for workshop and presentation submissions',
-    schema: [
-      {
-        $formkit: 'text',
-        name: 'workshopTitle',
-        label: 'Workshop Title',
-        placeholder: 'Enter workshop title',
-        validation: 'required',
-      },
-      {
-        $formkit: 'textarea',
-        name: 'description',
-        label: 'Workshop Description',
-        placeholder: 'Describe what participants will learn',
-        validation: 'required',
-        rows: 4,
-      },
-      {
-        $formkit: 'select',
-        name: 'duration',
-        label: 'Workshop Duration',
-        options: [
-          '30 minutes',
-          '1 hour',
-          '2 hours',
-          '3 hours',
-          'Half day',
-          'Full day'
-        ],
-        validation: 'required',
-      },
-      {
-        $formkit: 'url',
-        name: 'materialsUrl',
-        label: 'Workshop Materials URL',
-        placeholder: 'https://github.com/your-workshop-materials',
-        validation: 'required|url',
-      },
-      {
-        $formkit: 'url',
-        name: 'recordingUrl',
-        label: 'Recording URL (Optional)',
-        placeholder: 'https://youtube.com/watch?v=...',
-        validation: 'url',
-      },
-      {
-        $formkit: 'number',
-        name: 'expectedParticipants',
-        label: 'Expected Number of Participants',
-        placeholder: '20',
-        validation: 'required|number|min:1',
-      },
-      {
-        $formkit: 'submit',
-        label: 'Submit Workshop'
-      }
-    ]
+    id: 'hands-on-challenge-submission',
+    name: 'Hands-On Chanllenge Submission Form',
+    description: 'Hands-On Chanllenge Submission Form',
+    schema: [{
+      $formkit: "radio",
+      name: "college_cloud_champs",
+      label: "Are you part of College Cloud Champs / Club Event?",
+      validation: "required",
+      options: [
+        {
+          label: "Yes",
+          value: "yes"
+        },
+        {
+          label: "No",
+          value: "no"
+        }
+      ]
+    },
+    {
+      $formkit: "text",
+      name: "college_name",
+      label: "If Yes, Mention the college",
+    },
+    {
+      $formkit: "select",
+      name: "submission_type",
+      label: "Type of submission",
+      validation: "required",
+      placeholder: "Select submission type",
+      options: [
+        "Blog Post",
+        "Video Tutorial",
+      ]
+    },
+    {
+      $formkit: "url",
+      name: "projectUrl",
+      label: "Submit (Google Drive link / URL if already posted)",
+      validation: "required|url",
+    },
+    {
+      $formkit: "file",
+      name: "projectFile",
+      label: "Upload Your File",
+      placeholder: "Upload a file related to your submission",
+      accept: ".pdf,.zip,.jpg,.png,.doc,.docx,.mov,.mp4,.mkv,.avi,.md",
+      help: "Max file size: 100MB",
+      onInput: "$handlers.handleFileUpload"
+    },
+    {
+      $formkit: "hidden",
+      name: "projectFileUrl",
+      value: ""
+    },
+    {
+      $formkit: "radio",
+      name: "consent_posting",
+      label: "Do you consent to post it from @awsugmdu handles (Instagram, Linkedin, Twitter). We will mention creator in the caption of the post.",
+      validation: "required",
+      options: [
+        {
+          label: "Yes",
+          value: "yes"
+        },
+        {
+          label: "No",
+          value: "no"
+        }
+      ]
+    },
+    {
+      $formkit: "checkbox",
+      name: "acknowledge_rules",
+      label: "I have acknowledged the rules and regulations of the submission",
+      validation: "required|accepted",
+      value: false
+    },
+    {
+      $formkit: "textarea",
+      name: "additional_info",
+      label: "Any Additional information for organisers?",
+      validation: "required",
+    },
+    {
+      $formkit: "textarea",
+      name: "feedback",
+      label: "Feedback",
+      validation: "required",
+    }]
   }
 ];
 

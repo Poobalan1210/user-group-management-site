@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import type { Event } from '../data/events';
 import { useAdmin } from '../composables/useAdmin';
 import { useAuthStore } from '../auth/authStore';
-import { SubmissionService, type ChallengeSubmission } from '../services/submissionService';
+import { SubmissionService} from '../services/submissionService';
 import ChallengeForm from './ChallengeForm.vue';
 import RichTextDisplay from './RichTextDisplay.vue';
 
@@ -60,7 +60,8 @@ const handleChallengeSubmit = async (data: any) => {
       schemaName: data.schemaName,
       formData: data,
       submittedAt: data.submittedAt,
-      submittedBy: authStore.user?.attributes?.email || 'anonymous'
+      submittedBy: authStore.user?.attributes?.email || 'anonymous',
+      fileUrl: data.projectFileUrl || '',
     };
 
     // Submit the challenge using the submission service
@@ -193,23 +194,6 @@ const checkUserSubmission = async () => {
 onMounted(() => {
   checkUserSubmission();
 });
-
-// Debug: Log event data when component mounts
-console.log('EventCard - Event data:', props.event);
-console.log('EventCard - Event ID:', props.event.eventId);
-console.log('EventCard - Event type:', props.event.eventType);
-console.log('EventCard - Poster image:', props.event.posterImage);
-console.log('EventCard - YouTube video ID:', props.event.youtubeVideoId);
-
-// Additional debug for virtual events with checkpoints
-if (props.event.eventType === 'virtual_event' && props.event.checkpoints && props.event.checkpoints.length > 0) {
-  console.log('EventCard - First checkpoint:', props.event.checkpoints[0]);
-  console.log('EventCard - Checkpoint poster image:', props.event.checkpoints[0].posterImage);
-  console.log('EventCard - Checkpoint YouTube ID:', props.event.checkpoints[0].youtubeVideoId);
-  console.log('EventCard - Computed poster image:', eventPosterImage.value);
-  console.log('EventCard - Computed YouTube ID:', eventYoutubeVideoId.value);
-}
-
 
 
 

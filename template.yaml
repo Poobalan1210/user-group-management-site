@@ -310,9 +310,12 @@ Resources:
   CreateSubmissionFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/createSubmission.handler
+      Handler: handlers/triggerSubmissionProcessing.handler
       CodeUri: src/
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt StepFunctionExecutionRole.Arn
+      Environment:
+        Variables:
+          SUBMISSION_PROCESSING_STATE_MACHINE_ARN: !Ref SubmissionProcessingStateMachine
       Events:
         CreateSubmission:
           Type: Api
@@ -320,6 +323,36 @@ Resources:
             RestApiId: !Ref ApiGateway
             Path: /submissions
             Method: POST
+
+  # Step Function Lambda Functions
+  SaveSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/saveSubmission.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  ProcessVideoTutorialFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/processVideoTutorial.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  ProcessBlogPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/processBlogPost.handler
+      CodeUri: src/
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  AnalyzeContentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/analyzeContent.handler
+      CodeUri: src/
+      Role: !GetAtt BedrockLambdaExecutionRole.Arn
+      Timeout: 60
 
   GetSubmissionFunction:
     Type: AWS::Serverless::Function
@@ -634,6 +667,94 @@ Resources:
                   - ses:SendRawEmail
                 Resource: "*"
 
+  # Role for Lambda functions that need to invoke Step Functions
+  StepFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: StepFunctionAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Ref SubmissionProcessingStateMachine
+
+  # Role for Lambda functions that need Bedrock access
+  BedrockLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: "*"
+
+  # Step Function State Machine
+  SubmissionProcessingStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: src/stepfunctions/submissionProcessingStateMachine.json
+      DefinitionSubstitutions:
+        SaveSubmissionFunction: !GetAtt SaveSubmissionFunction.Arn
+        ProcessVideoTutorialFunction: !GetAtt ProcessVideoTutorialFunction.Arn
+        ProcessBlogPostFunction: !GetAtt ProcessBlogPostFunction.Arn
+        AnalyzeContentFunction: !GetAtt AnalyzeContentFunction.Arn
+        SubmissionsTable: !Ref SubmissionsTable
+      Role: !GetAtt StepFunctionRole.Arn
+
+  # Role for Step Function
+  StepFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StepFunctionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt SaveSubmissionFunction.Arn
+                  - !GetAtt ProcessVideoTutorialFunction.Arn
+                  - !GetAtt ProcessBlogPostFunction.Arn
+                  - !GetAtt AnalyzeContentFunction.Arn
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                Resource: !GetAtt SubmissionsTable.Arn
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
@@ -658,3 +779,7 @@ Outputs:
   RedemptionEmailQueueUrl:
     Description: SQS Queue URL for redemption emails
     Value: !Ref RedemptionEmailQueue
+    
+  SubmissionProcessingStateMachineArn:
+    Description: ARN of the Submission Processing State Machine
+    Value: !Ref SubmissionProcessingStateMachine

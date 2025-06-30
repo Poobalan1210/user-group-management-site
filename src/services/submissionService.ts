@@ -6,12 +6,13 @@ export interface ChallengeSubmission {
   schemaId: string;
   schemaName: string;
   formData: Record<string, any>;
-  submissionType?: string;
+  aiAnalysis: Record<string, any>; // AI analysis results
   submittedAt: string;
   submittedBy?: string; // User email/ID
   status?: 'pending' | 'approved' | 'rejected';
   points?: number;
   feedback?: string;
+  fileUrl?: string; // URL to the uploaded file
   createdAt?: string;
   updatedAt?: string;
 }

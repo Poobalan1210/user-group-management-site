@@ -1,0 +1,196 @@
+{
+  "Comment": "Submission Processing State Machine",
+  "StartAt": "SaveSubmission",
+  "States": {
+    "SaveSubmission": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${SaveSubmissionFunction}",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.submissionResult",
+      "Next": "CheckSubmissionType",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ProcessingError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "CheckSubmissionType": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.formData.submission_type",
+          "StringEquals": "Video Tutorial",
+          "Next": "ProcessVideoTutorial"
+        },
+        {
+          "Variable": "$.formData.submission_type",
+          "StringEquals": "Blog Post",
+          "Next": "ProcessBlogPost"
+        }
+      ],
+      "Default": "InvalidSubmissionType"
+    },
+    "ProcessVideoTutorial": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ProcessVideoTutorialFunction}",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.videoProcessingResult",
+      "Next": "AnalyzeContent",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ProcessingError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "ProcessBlogPost": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ProcessBlogPostFunction}",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.blogProcessingResult",
+      "Next": "AnalyzeContent",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ProcessingError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "AnalyzeContent": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${AnalyzeContentFunction}",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.analysisResult",
+      "Next": "UpdateSubmissionWithAnalysis",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ProcessingError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "UpdateSubmissionWithAnalysis": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${SubmissionsTable}",
+        "Key": {
+          "submissionId": {
+            "S.$": "$.submissionResult.Payload.submissionId"
+          }
+        },
+        "UpdateExpression": "SET aiAnalysis = :analysis, #status = :status, updatedAt = :updatedAt",
+        "ExpressionAttributeNames": {
+          "#status": "status"
+        },
+        "ExpressionAttributeValues": {
+          ":analysis": {
+            "M": {
+              "relevance": {
+                "N.$": "$.analysisResult.Payload.relevance"
+              },
+              "quality": {
+                "N.$": "$.analysisResult.Payload.quality"
+              },
+              "originality": {
+                "N.$": "$.analysisResult.Payload.originality"
+              },
+              "summary": {
+                "S.$": "$.analysisResult.Payload.summary"
+              }
+            }
+          },
+          ":status": {
+            "S": "Pending"
+          },
+          ":updatedAt": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    },
+    "InvalidSubmissionType": {
+      "Type": "Fail",
+      "Error": "InvalidSubmissionType",
+      "Cause": "Submission type must be either 'Video Tutorial' or 'Blog Post'"
+    },
+    "ProcessingError": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${SubmissionsTable}",
+        "Key": {
+          "submissionId": {
+            "S.$": "$.submissionResult.Payload.submissionId"
+          }
+        },
+        "UpdateExpression": "SET #status = :status, errorMessage = :error, updatedAt = :updatedAt",
+        "ExpressionAttributeNames": {
+          "#status": "status"
+        },
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "processing_failed"
+          },
+          ":error": {
+            "S.$": "$.error.Cause"
+          },
+          ":updatedAt": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

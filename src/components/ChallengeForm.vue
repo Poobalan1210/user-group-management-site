@@ -2,6 +2,9 @@
 import { ref, computed, watch } from 'vue';
 import { FormKit, FormKitSchema } from '@formkit/vue';
 import { getFormSchemaById } from '../data/formSchemas';
+import { fileUploadService } from '../services/fileUploadService';
+
+const formRef = ref(null);
 
 const props = defineProps<{
   isOpen: boolean;
@@ -15,6 +18,8 @@ const emit = defineEmits<{
 }>();
 
 const formData = ref({});
+const isUploading = ref(false);
+const uploadError = ref('');
 
 const selectedSchema = computed(() => {
   return props.formSchemaId ? getFormSchemaById(props.formSchemaId) : null;
@@ -25,22 +30,101 @@ watch(() => props.formSchemaId, () => {
   formData.value = {};
 });
 
-const handleFormSubmit = (data: any) => {
-  const submissionData = {
-    ...data,
-    schemaId: props.formSchemaId,
-    schemaName: selectedSchema.value?.name,
-    eventTitle: props.eventTitle,
-    submittedAt: new Date().toISOString()
-  };
-  console.log('Form submitted:', submissionData);
-  emit('submit', submissionData);
-  handleClose();
+// Watch for changes in the FormKit node value
+watch(() => formRef.value?.node?.value, async (newValue, oldValue) => {
+  if (newValue?.projectFile && newValue.projectFile.length > 0) {
+    const fileObject = newValue.projectFile[0];
+    console.log('File object from FormKit:', fileObject);
+    
+    // The actual File object is nested inside
+    const file = fileObject.file || fileObject;
+    
+    if (file instanceof File) {
+      console.log('Valid File detected:', file.name, file.size, file.type);
+      
+      // Check if we already uploaded this file
+      if (!newValue.projectFileUrl || newValue.projectFileUrl === '') {
+        console.log('No URL found, uploading file...');
+        await handleFileUpload(file);
+      } else {
+        console.log('File already uploaded, URL:', newValue.projectFileUrl);
+      }
+    } else {
+      console.log('Not a valid File object:', file);
+    }
+  }
+}, { deep: true, immediate: false });
+
+const handleFileUpload = async (file: File) => {
+  console.log('Handling file upload:', file.name, file.size, file.type);
+
+  try {
+    isUploading.value = true;
+    uploadError.value = '';
+
+    const folder = `submissions/${props.eventTitle?.replace(/\s+/g, '-').toLowerCase() || 'general'}`;
+    console.log('Uploading to folder:', folder);
+    
+    const fileUrl = await fileUploadService.uploadFile(file, folder);
+    console.log('File uploaded successfully, URL:', fileUrl);
+
+    // Update the FormKit node directly
+    if (formRef.value?.node) {
+      const formNode = formRef.value.node;
+      const currentValue = { ...formNode.value };
+      currentValue.projectFileUrl = fileUrl;
+      
+      console.log('Updating FormKit node with URL:', fileUrl);
+      formNode.input(currentValue);
+    }
+    
+    // Also update formData as backup
+    formData.value.projectFileUrl = fileUrl;
+    console.log('Updated formData.projectFileUrl to:', fileUrl);
+
+  } catch (error) {
+    console.error('File upload error:', error);
+    uploadError.value = error.message || 'Failed to upload file';
+  } finally {
+    isUploading.value = false;
+  }
+};
+
+const handleFormSubmit = async (data: any) => {
+  console.log('Form data before submission:', data);
+  try {
+    isUploading.value = true;
+    uploadError.value = '';
+    
+    delete data.projectFile;
+    
+    const submissionData = {
+      ...data,
+      schemaId: props.formSchemaId,
+      schemaName: selectedSchema.value?.name,
+      eventTitle: props.eventTitle,
+      submittedAt: new Date().toISOString()
+    };
+    
+    console.log('Form submitted:', submissionData);
+    emit('submit', submissionData);
+    handleClose();
+  } catch (error) {
+    console.error('Error during form submission:', error);
+    uploadError.value = error.message || 'Failed to upload file';
+  } finally {
+    isUploading.value = false;
+  }
 };
 
 const handleClose = () => {
   formData.value = {};
+  uploadError.value = '';
   emit('close');
+};
+
+const formHandlers = {
+  handleFileUpload
 };
 </script>
 
@@ -61,19 +145,18 @@ const handleClose = () => {
 
           <!-- FormKit Dynamic Form -->
           <div class="formkit-form">
-            <FormKit type="form" :value="formData" @submit="handleFormSubmit" :config="{
-              classes: {
-                outer: 'mb-4',
-                label: 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1',
-                input: 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white',
-                textarea: 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white resize-vertical',
-                select: 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white',
-                submit: 'w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200',
-                help: 'text-xs text-gray-500 dark:text-gray-400 mt-1',
-                message: 'text-sm text-red-600 dark:text-red-400 mt-1'
-              }
-            }">
-              <FormKitSchema :schema="selectedSchema.schema || []" />
+            <div v-if="uploadError" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {{ uploadError }}
+            </div>
+            
+            <FormKit type="form" ref="formRef" v-model="formData" @submit="handleFormSubmit" >
+              <FormKitSchema :schema="selectedSchema.schema || []" :data="{ $handlers: formHandlers }"/>
+              <template #submit="{ attrs }">
+                <button v-bind="attrs" :disabled="isUploading">
+                  <UButton v-if="isUploading" :loading="isUploading">Uploading</UButton>
+                  <UButton v-else>Submit</UButton>
+                </button>
+              </template>
             </FormKit>
           </div>
         </div>
@@ -96,6 +179,8 @@ const handleClose = () => {
 :deep(.formkit-form) {
   --fk-color-primary: rgb(59 130 246);
   --fk-color-primary-contrast: white;
+  --fk-color-file-border: rgb(209 213 219);
+  --fk-color-file-border-dark: rgb(75 85 99);
 }
 
 :deep(.formkit-outer) {
@@ -170,6 +255,16 @@ const handleClose = () => {
 :deep(.formkit-input[type="checkbox"]) {
   width: auto;
   margin-right: 0.5rem;
+}
+
+:deep(.formkit-input[type="file"]) {
+  padding: 0.5rem;
+  border: 1px dashed rgb(209 213 219);
+  background-color: transparent;
+}
+
+:deep(.dark .formkit-input[type="file"]) {
+  border-color: rgb(75 85 99);
 }
 
 :deep(.formkit-fieldset) {
