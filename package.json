@@ -11,6 +11,8 @@
   "dependencies": {
     "@aws-amplify/auth": "^6.13.1",
     "@aws-amplify/ui-vue": "^4.3.3",
+    "@aws-sdk/client-bedrock-agent": "^3.839.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.839.0",
     "@aws-sdk/client-dynamodb": "^3.835.0",
     "@aws-sdk/client-s3": "^3.839.0",
     "@aws-sdk/lib-dynamodb": "^3.835.0",
@@ -33,6 +35,7 @@
     "@formkit/vue": "^1.6.9",
     "@vitejs/plugin-vue": "^5.2.1",
     "autoprefixer": "^10.4.21",
+    "dotenv": "^17.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.8.2",

@@ -30,30 +30,25 @@ watch(() => props.formSchemaId, () => {
   formData.value = {};
 });
 
-// Watch for changes in the FormKit node value
-watch(() => formRef.value?.node?.value, async (newValue, oldValue) => {
-  if (newValue?.projectFile && newValue.projectFile.length > 0) {
-    const fileObject = newValue.projectFile[0];
-    console.log('File object from FormKit:', fileObject);
-    
-    // The actual File object is nested inside
+// Watch specifically for projectFile changes
+watch(() => formRef.value?.node?.value?.projectFile, async (newProjectFile, oldProjectFile) => {
+  if (newProjectFile && newProjectFile.length > 0) {
+    const fileObject = newProjectFile[0];
     const file = fileObject.file || fileObject;
     
     if (file instanceof File) {
-      console.log('Valid File detected:', file.name, file.size, file.type);
+      // Check if this is a new file (different from previous or no previous file)
+      const isNewFile = !oldProjectFile || 
+                       oldProjectFile.length === 0 || 
+                       oldProjectFile[0]?.file?.name !== file.name ||
+                       oldProjectFile[0]?.file?.size !== file.size;
       
-      // Check if we already uploaded this file
-      if (!newValue.projectFileUrl || newValue.projectFileUrl === '') {
-        console.log('No URL found, uploading file...');
+      if (isNewFile && !formRef.value?.node?.value?.projectFileUrl) {
         await handleFileUpload(file);
-      } else {
-        console.log('File already uploaded, URL:', newValue.projectFileUrl);
       }
-    } else {
-      console.log('Not a valid File object:', file);
     }
   }
-}, { deep: true, immediate: false });
+}, { immediate: false });
 
 const handleFileUpload = async (file: File) => {
   console.log('Handling file upload:', file.name, file.size, file.type);

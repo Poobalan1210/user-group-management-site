@@ -26,7 +26,7 @@ onMounted(async () => {
     isLoading.value = true;
     
     // Get only pending submissions for admin review
-    const submissionsData = await SubmissionService.getAllSubmissions({ status: 'ai_analyzed' });
+    const submissionsData = await SubmissionService.getAllSubmissions({ status: 'Pending' });
     submissions.value = submissionsData.map(submission => ({
       id: submission.submissionId,
       email: submission.submittedBy,

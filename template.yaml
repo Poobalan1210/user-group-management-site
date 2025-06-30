@@ -516,17 +516,17 @@ Resources:
             BatchSize: 1
 
   # Lambda Function - Image Upload
-  UploadImageFunction:
+  UploadFileFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/uploadImage.handler
+      Handler: handlers/uploadFile.handler
       CodeUri: src/
       Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
           IMAGES_BUCKET_NAME: !Ref ImagesBucket
       Events:
-        UploadImage:
+        UploadFile:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
@@ -703,15 +703,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: BedrockAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - bedrock:InvokeModel
-                Resource: "*"
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
 
   # Step Function State Machine
   SubmissionProcessingStateMachine:
