@@ -101,42 +101,52 @@ const openCreateForm = (type: 'builders_skill_sprint' | 'virtual_event') => {
       <UAlert v-if="eventStore.error" color="error" class="mb-6" :title="eventStore.error" />
 
       <!-- Live Events Section -->
-      <div class="mb-8">
-        <div class="flex items-center mb-4">
-          <UIcon name="i-heroicons-bolt" class="text-yellow-500 mr-2" />
-          <h2 class="text-xl font-semibold">Live Events</h2>
+      <div class="mb-12">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="p-2 bg-yellow-100 dark:bg-yellow-950 rounded-lg">
+            <UIcon name="i-heroicons-bolt" class="text-yellow-600 dark:text-yellow-400 text-lg" />
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold">Live Events</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ eventStore.liveEvents.length }} active</p>
+          </div>
         </div>
-        
-        <div v-if="eventStore.liveEvents.length > 0" class="space-y-4">
-          <EventCard 
-            v-for="event in eventStore.liveEvents" 
-            :key="event.eventId" 
+
+        <div v-if="eventStore.liveEvents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <EventCard
+            v-for="event in eventStore.liveEvents"
+            :key="event.eventId"
             :event="event"
-            @edit="handleEditEvent" 
+            @edit="handleEditEvent"
           />
         </div>
-        <UAlert v-else title="No Live Events" color="primary">
-          There are no live events at the moment.
+        <UAlert v-else icon="i-heroicons-calendar" title="No Live Events" color="primary">
+          <template #description>There are no live events at the moment. Check back soon!</template>
         </UAlert>
       </div>
 
       <!-- Past Events Section -->
       <div>
-        <div class="flex items-center mb-4">
-          <UIcon name="i-heroicons-clock" class="text-gray-500 mr-2" />
-          <h2 class="text-xl font-semibold">Past Events</h2>
+        <div class="flex items-center gap-3 mb-6">
+          <div class="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+            <UIcon name="i-heroicons-clock" class="text-gray-600 dark:text-gray-300 text-lg" />
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold">Past Events</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ eventStore.pastEvents.length }} completed</p>
+          </div>
         </div>
-        
-        <div v-if="eventStore.pastEvents.length > 0" class="space-y-4">
-          <EventCard 
-            v-for="event in eventStore.pastEvents" 
-            :key="event.eventId" 
+
+        <div v-if="eventStore.pastEvents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <EventCard
+            v-for="event in eventStore.pastEvents"
+            :key="event.eventId"
             :event="event"
             @edit="handleEditEvent"
           />
         </div>
-        <UAlert v-else title="No Past Events" color="primary">
-          There are no past events to display.
+        <UAlert v-else icon="i-heroicons-archive-box" title="No Past Events" color="primary">
+          <template #description>You haven't completed any events yet.</template>
         </UAlert>
       </div>
     </div>

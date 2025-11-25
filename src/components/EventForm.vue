@@ -5,6 +5,8 @@ import { getFormSchemaOptions } from "../data/formSchemas";
 import RichTextEditor from './RichTextEditor.vue';
 import ImageUpload from './ImageUpload.vue';
 
+const currentStep = ref(1);
+
 const props = defineProps<{
   isOpen: boolean;
   defaultEventType?: 'builders_skill_sprint' | 'virtual_event';
@@ -310,9 +312,50 @@ const cancel = () => {
 };
 
 const handleModalClose = () => {
-  document.body.style.overflow = "auto"; // Ensure scrolling is restored
+  document.body.style.overflow = "auto";
   emit("cancel");
 };
+
+const isStep1Valid = computed(() => {
+  return newEvent.title && newEvent.description && newEvent.date;
+});
+
+const isStep2Valid = computed(() => {
+  if (newEvent.eventType === 'virtual_event') {
+    return true;
+  }
+  return true;
+});
+
+const isStep3Valid = computed(() => {
+  if (newEvent.eventType === 'builders_skill_sprint') {
+    return newEvent.checkpoints.length > 0;
+  }
+  return true;
+});
+
+const goToStep = (step: number) => {
+  currentStep.value = step;
+};
+
+const nextStep = () => {
+  if (currentStep.value < 4) {
+    currentStep.value++;
+  }
+};
+
+const prevStep = () => {
+  if (currentStep.value > 1) {
+    currentStep.value--;
+  }
+};
+
+const steps = [
+  { number: 1, title: 'Basic Info', icon: 'i-heroicons-information-circle' },
+  { number: 2, title: 'Details', icon: 'i-heroicons-document' },
+  { number: 3, title: 'Checkpoints & Media', icon: 'i-heroicons-flag' },
+  { number: 4, title: 'Resources', icon: 'i-heroicons-book-open' }
+];
 </script>
 
 <template>
@@ -320,51 +363,99 @@ const handleModalClose = () => {
     :open="isOpen"
     @update:open="handleModalClose"
     :close="{ onClick: cancel }"
-    :title="isEditMode ? `Edit ${newEvent.eventType === 'virtual_event' ? 'Virtual Event' : 'Skill Sprint'}` : `Create ${newEvent.eventType === 'virtual_event' ? 'Virtual Event' : 'Skill Sprint'}`"
+    size="2xl"
+    class="z-50"
   >
+    <template #title>
+      <div class="flex items-center justify-between w-full">
+        <h3 class="text-xl font-bold">
+          {{ isEditMode ? `Edit ${newEvent.eventType === 'virtual_event' ? 'Virtual Event' : 'Skill Sprint'}` : `Create ${newEvent.eventType === 'virtual_event' ? 'Virtual Event' : 'Skill Sprint'}` }}
+        </h3>
+        <span class="text-sm text-gray-500">Step {{ currentStep }} of 4</span>
+      </div>
+    </template>
+
     <template #body>
-      <div class="p-4 bg-dark text-white max-h-[70vh] overflow-y-auto">
-        <form @submit.prevent="submitForm">
-          <!-- Basic Event Info -->
-          <div class="space-y-8 mb-8">
-            <UForm :state="newEvent">
-              <UInput
-                v-model="newEvent.title"
-                placeholder="Enter event title"
-                class="w-full dark-input mb-8"
-              />
-
-              <UTextarea
-                v-model="newEvent.description"
-                placeholder="Enter event description"
-                :rows="4"
-                class="w-full dark-input mb-8"
-              />
-
-              <UInput
-                v-model="newEvent.date"
-                type="date"
-                class="w-full dark-input mb-8"
-              />
-
-              <USelect
-                v-model="newEvent.status"
-                :items="statusOptions"
-                placeholder="Select event status"
-                class="w-full dark-select mb-8"
-              />
-
+      <div class="bg-dark text-white">
+        <!-- Step Indicator -->
+        <div class="px-6 pt-4 pb-6 border-b border-gray-700">
+          <div class="flex items-center justify-between gap-2">
+            <button
+              v-for="step in steps"
+              :key="step.number"
+              @click="goToStep(step.number)"
+              class="flex flex-col items-center gap-1 flex-1"
+              :class="currentStep >= step.number ? '' : 'opacity-50'"
+            >
               <div
-                label="Tags"
-                help="Select relevant tags for your event (helps with discoverability)"
-                class="mb-8"
+                class="w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all"
+                :class="currentStep === step.number
+                  ? 'bg-primary-500 text-white ring-2 ring-primary-300'
+                  : currentStep > step.number
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-700 text-gray-300'"
               >
-                <div class="flex flex-wrap gap-2 mb-3">
+                <UIcon v-if="currentStep > step.number" name="i-heroicons-check" />
+                <span v-else>{{ step.number }}</span>
+              </div>
+              <span class="text-xs text-center text-gray-400">{{ step.title }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Steps -->
+        <div class="px-6 py-6 max-h-[60vh] overflow-y-auto">
+          <form @submit.prevent="submitForm">
+            <!-- Step 1: Basic Info -->
+            <div v-if="currentStep === 1" class="space-y-6 animate-fadeIn">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-white">Event Title</label>
+                <UInput
+                  v-model="newEvent.title"
+                  placeholder="Enter event title"
+                  class="w-full dark-input"
+                  size="lg"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-white">Description</label>
+                <RichTextEditor
+                  v-model="newEvent.description"
+                  placeholder="Describe your event. Use **bold**, *italic*, • bullets, [links](url)"
+                />
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold mb-2 text-white">Event Date</label>
+                  <UInput
+                    v-model="newEvent.date"
+                    type="date"
+                    class="w-full dark-input"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold mb-2 text-white">Status</label>
+                  <USelect
+                    v-model="newEvent.status"
+                    :items="statusOptions"
+                    class="w-full dark-select"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Details & Tags -->
+            <div v-if="currentStep === 2" class="space-y-6 animate-fadeIn">
+              <div>
+                <label class="block text-sm font-semibold mb-3 text-white">Tags</label>
+                <div class="flex flex-wrap gap-2 mb-4">
                   <UBadge
                     v-for="(tag, index) in newEvent.tags || []"
                     :key="index"
                     :color="newEvent.eventType === 'virtual_event' ? 'info' : 'primary'"
-                    class="flex items-center"
+                    class="flex items-center gap-1"
                   >
                     {{ tagOptions.find((t) => t.value === tag)?.label || tag }}
                     <UButton
@@ -372,324 +463,215 @@ const handleModalClose = () => {
                       icon="i-heroicons-x-mark"
                       class="ml-1"
                       :color="newEvent.eventType === 'virtual_event' ? 'info' : 'primary'"
+                      variant="ghost"
                       @click="removeTag(index)"
                     />
                   </UBadge>
-                  <p
-                    v-if="(newEvent.tags || []).length === 0"
-                    class="text-sm text-gray-400 italic"
-                  >
-                    No tags added yet
-                  </p>
                 </div>
-                <div class="flex gap-2 mb-8">
+                <div class="flex gap-2">
                   <USelect
                     v-model="selectedTag"
                     :items="tagOptions"
                     placeholder="Select a tag"
                     class="flex-grow dark-select"
                   />
-                  <UButton @click="addTag" :disabled="!selectedTag" :color="buttonColor"
-                    >Add Tag</UButton
-                  >
+                  <UButton @click="addTag" :disabled="!selectedTag" :color="buttonColor" icon="i-heroicons-plus">
+                    Add
+                  </UButton>
                 </div>
+              </div>
 
-                <div v-if="newEvent.eventType === 'builders_skill_sprint'" class="mb-8">
-                  <label class="block text-sm font-medium mb-2 text-white">Challenge Form Schema</label>
-                  <USelect
-                    v-model="newEvent.challengeFormSchema"
-                    :items="formSchemaOptions"
-                    placeholder="Select a form schema for challenge submissions"
-                    class="w-full dark-select"
-                  />
-                </div>
-
-                <!-- Meetup Link for Virtual Events -->
-                <UInput
-                  v-if="newEvent.eventType === 'virtual_event'"
-                  v-model="newEvent.meetupLink"
-                  placeholder="Meetup URL"
-                  class="w-full dark-input mb-8"
+              <div v-if="newEvent.eventType === 'builders_skill_sprint'">
+                <label class="block text-sm font-semibold mb-2 text-white">Challenge Form Schema</label>
+                <USelect
+                  v-model="newEvent.challengeFormSchema"
+                  :items="formSchemaOptions"
+                  placeholder="Select form schema for submissions"
+                  class="w-full dark-select"
                 />
               </div>
-            </UForm>
-          </div>
 
-          <!-- Checkpoints Section - Only show for Builders Skill Sprint -->
-          <template v-if="newEvent.eventType === 'builders_skill_sprint'">
-            <UDivider class="border-gray-700" />
-            <div class="my-8 space-y-6">
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium border-b border-gray-700 pb-2">
-                  Checkpoints
-                </h3>
-                <p class="text-sm text-gray-400">
-                  {{ newEvent.checkpoints.length }} checkpoints added
-                </p>
+              <div v-if="newEvent.eventType === 'virtual_event'">
+                <label class="block text-sm font-semibold mb-2 text-white">Meetup URL</label>
+                <UInput
+                  v-model="newEvent.meetupLink"
+                  placeholder="https://meetup.com/..."
+                  class="w-full dark-input"
+                />
               </div>
+            </div>
 
-              <div class="space-y-8">
-                <div
-                  v-if="newEvent.checkpoints.length > 0"
-                  class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"
-                >
+            <!-- Step 3: Checkpoints & Media -->
+            <div v-if="currentStep === 3" class="space-y-6 animate-fadeIn">
+              <div v-if="newEvent.eventType === 'builders_skill_sprint'">
+                <h4 class="text-lg font-semibold mb-4 text-white flex items-center gap-2">
+                  <UIcon name="i-heroicons-flag" />
+                  Checkpoints ({{ newEvent.checkpoints.length }})
+                </h4>
+
+                <div v-if="newEvent.checkpoints.length > 0" class="space-y-3 mb-6">
                   <div
                     v-for="(checkpoint, index) in newEvent.checkpoints"
                     :key="index"
-                    class="p-4 border border-gray-700 rounded-md bg-gray-800"
+                    class="p-3 border border-gray-700 rounded-lg bg-gray-800 flex justify-between items-start"
                   >
-                    <div class="flex justify-between items-start">
-                      <div>
-                        <h4 class="font-medium text-lg">
-                          {{ checkpoint.title }}
-                        </h4>
-                        <p class="text-xs text-gray-400 mb-2">
-                          {{ checkpoint.date }}
-                        </p>
-                      </div>
-                      <UButton
-                        color="primary"
-                        variant="ghost"
-                        icon="i-heroicons-trash"
-                        size="xs"
-                        @click="removeCheckpoint(index)"
-                      />
-                    </div>
-                    <p class="text-sm mb-3">{{ checkpoint.description }}</p>
-                    <div class="flex flex-wrap gap-2">
-                      <UBadge
-                        v-if="checkpoint.meetupUrl"
-                        color="primary"
-                        size="sm"
-                        >Has Meetup Link</UBadge
-                      >
-                      <UBadge
-                        v-if="checkpoint.youtubeVideoId"
-                        color="primary"
-                        size="sm"
-                        >Has YouTube Video</UBadge
-                      >
-                      <UBadge
-                        v-if="checkpoint.posterImage"
-                        color="primary"
-                        size="sm"
-                        >Has Poster Image</UBadge
-                      >
-                    </div>
-                  </div>
-                </div>
-                <p
-                  v-else
-                  class="text-sm text-gray-400 italic text-center py-4 border border-gray-700 rounded-md bg-gray-800"
-                >
-                  No checkpoints added yet. Add your first checkpoint below.
-                </p>
-
-                <div class="border border-gray-700 rounded-md p-6 bg-gray-800">
-                  <h4
-                    class="font-medium mb-6 text-lg border-b border-gray-700 pb-2"
-                  >
-                    Add New Checkpoint
-                  </h4>
-                  <div class="space-y-6">
-                    <UForm label="Checkpoint Title" required>
-                      <UInput
-                        v-model="newCheckpoint.title"
-                        placeholder="Checkpoint Title"
-                        class="w-full dark-input mb-8"
-                      />
-
-                      <UInput
-                        v-model="newCheckpoint.date"
-                        type="date"
-                        class="w-full dark-input mb-8"
-                      />
-
-                      <div class="mb-8">
-                        <label class="block text-sm font-medium mb-2 text-white">Checkpoint Description</label>
-                        <RichTextEditor
-                          v-model="newCheckpoint.description"
-                          placeholder="Describe what will happen at this checkpoint. Use **bold**, *italic*, • bullets, [links](url), and emojis 🚀"
-                        />
-                      </div>
-
-                      <UInput
-                        v-model="newCheckpoint.meetupUrl"
-                        placeholder="Meetup URL."
-                        class="w-full dark-input mb-8"
-                      />
-
-                      <div class="mb-8">
-                        <label class="block text-sm font-medium mb-2 text-white">Checkpoint Poster Image</label>
-                        <p class="text-xs text-gray-400 mb-2">Current value: {{ newCheckpoint.posterImage || 'None' }}</p>
-                        <ImageUpload
-                          v-model="newCheckpoint.posterImage"
-                          placeholder="Upload checkpoint poster image"
-                          :folder="`events/${newEvent.title ? newEvent.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() : 'untitled'}/checkpoints`"
-                        />
-                      </div>
-
-                      <UButton
-                        block
-                        color="primary"
-                        @click="addCheckpoint"
-                        :disabled="
-                          !newCheckpoint.title || !newCheckpoint.description
-                        "
-                      >
-                        <UIcon name="i-heroicons-plus" class="mr-1" />
-                        Add Checkpoint
-                      </UButton>
-                    </UForm>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Virtual Event Details - Simplified form -->
-          <template v-if="newEvent.eventType === 'virtual_event'">
-            <UDivider class="border-gray-700" />
-            <div class="my-8 space-y-6">
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium border-b border-gray-700 pb-2 text-info-500">
-                  Virtual Event Details
-                </h3>
-              </div>
-
-              <div class="space-y-6">
-                <div class="mb-8">
-                  <label class="block text-sm font-medium mb-2 text-info-500">Event Poster Image</label>
-                  <p class="text-xs text-gray-400 mb-2">Current value: {{ newEvent.posterImage || 'None' }}</p>
-                  <p class="text-xs text-amber-400 mb-2">Note: This will be stored in the first checkpoint for virtual events</p>
-                  <ImageUpload
-                    v-model="newEvent.posterImage"
-                    placeholder="Upload event poster image"
-                    :folder="`events/${newEvent.title ? newEvent.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() : 'untitled'}/poster`"
-                  />
-                </div>
-
-                <UFormField label="YouTube Video ID">
-                  <UInput
-                    v-model="newEvent.youtubeVideoId"
-                    placeholder="e.g., dQw4w9WgXcQ"
-                    class="w-full dark-input mb-8"
-                  />
-                  <p class="text-xs text-amber-400 mb-2">Note: This will be stored in the first checkpoint for virtual events</p>
-                </UFormField>
-              </div>
-            </div>
-          </template>
-
-          <!-- Resources Section -->
-          <UDivider class="border-gray-700" />
-          <div class="my-8 space-y-6">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-medium border-b border-gray-700 pb-2">
-                Resources
-              </h3>
-            </div>
-
-            <div class="space-y-8">
-              <div
-                v-if="newEvent.resources.length > 0"
-                class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"
-              >
-                <div
-                  v-for="(resource, index) in newEvent.resources"
-                  :key="index"
-                  class="p-4 border border-gray-700 rounded-md bg-gray-800"
-                >
-                  <div class="flex justify-between">
-                    <div class="flex items-center">
-                      <UIcon
-                        :name="
-                          resource.type === 'document'
-                            ? 'i-heroicons-document-text'
-                            : resource.type === 'video'
-                            ? 'i-heroicons-video-camera'
-                            : resource.type === 'code'
-                            ? 'i-heroicons-code-bracket'
-                            : 'i-heroicons-link'
-                        "
-                        class="mr-2 text-primary-500"
-                      />
-                      <h4 class="font-medium">{{ resource.title }}</h4>
+                    <div>
+                      <p class="font-medium text-white">{{ checkpoint.title }}</p>
+                      <p class="text-sm text-gray-400">{{ checkpoint.date }}</p>
                     </div>
                     <UButton
                       color="primary"
                       variant="ghost"
                       icon="i-heroicons-trash"
                       size="xs"
-                      @click="removeResource(index)"
+                      @click="removeCheckpoint(index)"
                     />
                   </div>
-                  <p class="text-xs text-gray-400 mt-1 break-all">
-                    {{ resource.link }}
-                  </p>
+                </div>
+
+                <div class="border border-gray-700 rounded-lg p-4 bg-gray-800 space-y-4">
+                  <h5 class="font-medium text-white">Add Checkpoint</h5>
+                  <UInput
+                    v-model="newCheckpoint.title"
+                    placeholder="Checkpoint title"
+                    class="w-full dark-input"
+                  />
+                  <UInput
+                    v-model="newCheckpoint.date"
+                    type="date"
+                    class="w-full dark-input"
+                  />
+                  <RichTextEditor
+                    v-model="newCheckpoint.description"
+                    placeholder="Checkpoint description"
+                  />
+                  <UInput
+                    v-model="newCheckpoint.meetupUrl"
+                    placeholder="Meetup URL (optional)"
+                    class="w-full dark-input"
+                  />
+                  <UButton
+                    block
+                    :color="buttonColor"
+                    @click="addCheckpoint"
+                    :disabled="!newCheckpoint.title || !newCheckpoint.description"
+                    icon="i-heroicons-plus"
+                  >
+                    Add Checkpoint
+                  </UButton>
                 </div>
               </div>
-              <p
-                v-else
-                class="text-sm text-gray-400 italic text-center py-4 border border-gray-700 rounded-md bg-gray-800"
-              >
-                No resources added yet. Add your first resource below.
-              </p>
 
-              <div class="border border-gray-700 rounded-md p-6 bg-gray-800">
-                <h4
-                  class="font-medium mb-6 text-lg border-b border-gray-700 pb-2"
-                >
-                  Add New Resource
+              <div v-if="newEvent.eventType === 'virtual_event'" class="space-y-4">
+                <h4 class="text-lg font-semibold text-white flex items-center gap-2">
+                  <UIcon name="i-heroicons-photo" />
+                  Event Media
                 </h4>
-                <div class="space-y-6">
-                  <UForm :state="newResource">
-                    <UInput
-                      v-model="newResource.title"
-                      placeholder="e.g., Getting Started Guide"
-                      class="w-full dark-input mb-6"
-                    />
-
-                    <UInput
-                      v-model="newResource.link"
-                      placeholder="https://example.com/resource"
-                      class="w-full dark-input mb-6"
-                    />
-
-                    <USelect
-                      v-model="newResource.type"
-                      :items="resourceTypeOptions"
-                      class="w-full dark-select mb-6"
-                    />
-
-                    <UButton
-                    block
-                    color="primary"
-                    @click="addResource"
-                    :disabled="!newResource.title || !newResource.link"
-                  >
-                    <UIcon name="i-heroicons-plus" class="mr-1" />
-                    Add Resource
-                  </UButton>
-                  </UForm>
-
-                  
+                <div>
+                  <label class="block text-sm font-medium mb-2 text-white">Poster Image</label>
+                  <ImageUpload
+                    v-model="newEvent.posterImage"
+                    placeholder="Upload poster image"
+                    :folder="`events/${newEvent.title ? newEvent.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() : 'untitled'}`"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-2 text-white">YouTube Video ID</label>
+                  <UInput
+                    v-model="newEvent.youtubeVideoId"
+                    placeholder="e.g., dQw4w9WgXcQ"
+                    class="w-full dark-input"
+                  />
                 </div>
               </div>
             </div>
-          </div>
-        </form>
+
+            <!-- Step 4: Resources -->
+            <div v-if="currentStep === 4" class="space-y-6 animate-fadeIn">
+              <h4 class="text-lg font-semibold mb-4 text-white flex items-center gap-2">
+                <UIcon name="i-heroicons-book-open" />
+                Resources ({{ newEvent.resources.length }})
+              </h4>
+
+              <div v-if="newEvent.resources.length > 0" class="space-y-3 mb-6">
+                <div
+                  v-for="(resource, index) in newEvent.resources"
+                  :key="index"
+                  class="p-3 border border-gray-700 rounded-lg bg-gray-800 flex justify-between items-start"
+                >
+                  <div class="flex-1">
+                    <p class="font-medium text-white">{{ resource.title }}</p>
+                    <p class="text-xs text-gray-400 truncate">{{ resource.link }}</p>
+                  </div>
+                  <UButton
+                    color="primary"
+                    variant="ghost"
+                    icon="i-heroicons-trash"
+                    size="xs"
+                    @click="removeResource(index)"
+                  />
+                </div>
+              </div>
+
+              <div class="border border-gray-700 rounded-lg p-4 bg-gray-800 space-y-4">
+                <h5 class="font-medium text-white">Add Resource</h5>
+                <UInput
+                  v-model="newResource.title"
+                  placeholder="Resource title"
+                  class="w-full dark-input"
+                />
+                <UInput
+                  v-model="newResource.link"
+                  placeholder="https://..."
+                  class="w-full dark-input"
+                />
+                <USelect
+                  v-model="newResource.type"
+                  :items="resourceTypeOptions"
+                  class="w-full dark-select"
+                />
+                <UButton
+                  block
+                  :color="buttonColor"
+                  @click="addResource"
+                  :disabled="!newResource.title || !newResource.link"
+                  icon="i-heroicons-plus"
+                >
+                  Add Resource
+                </UButton>
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
     </template>
 
     <template #footer>
-      <div class="flex justify-end gap-2 p-4 bg-dark text-white w-full">
-        <div class="ml-auto flex gap-2">
-          <UButton variant="outline" color="neutral" @click="cancel"
-            >Cancel</UButton
+      <div class="flex justify-between gap-2 p-4 bg-dark text-white border-t border-gray-700">
+        <div class="flex gap-2">
+          <UButton v-if="currentStep > 1" variant="outline" color="neutral" @click="prevStep">
+            Previous
+          </UButton>
+        </div>
+        <div class="flex gap-2 ml-auto">
+          <UButton variant="outline" color="neutral" @click="cancel">
+            Cancel
+          </UButton>
+          <UButton
+            v-if="currentStep < 4"
+            :color="buttonColor"
+            @click="nextStep"
+            icon="i-heroicons-arrow-right"
           >
-          <UButton :color="buttonColor" @click="submitForm">
-            {{ isEditMode ? 'Update Event' : 'Create Event' }}
+            Next
+          </UButton>
+          <UButton
+            v-else
+            :color="buttonColor"
+            @click="submitForm"
+            icon="i-heroicons-check"
+          >
+            {{ isEditMode ? 'Update' : 'Create' }}
           </UButton>
         </div>
       </div>
@@ -698,7 +680,22 @@ const handleModalClose = () => {
 </template>
 
 <style scoped>
-/* Fix for dropdowns to ensure they display properly */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Dark mode input styles */
 :deep(.dark-select .u-select__input) {
   background-color: #1e293b !important;
   border-color: #334155 !important;
@@ -725,7 +722,6 @@ const handleModalClose = () => {
   color: #94a3b8 !important;
 }
 
-/* Fix all form labels to be white */
 :deep(.u-form-group label) {
   color: white !important;
 }
@@ -746,13 +742,4 @@ const handleModalClose = () => {
 .border-gray-700 {
   border-color: #334155 !important;
 }
-
-.media-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  align-items: center;
-}
-
-/* Remove the custom modal styling since we're using UModal */
 </style>

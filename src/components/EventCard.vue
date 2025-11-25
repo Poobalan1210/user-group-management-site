@@ -200,22 +200,45 @@ onMounted(() => {
 </script>
 
 <template>
-  <UCard class="w-full mb-4">
-    <UCardHeader @click="toggleExpand" class="cursor-pointer" :ui="{ base: 'p-4' }">
-      <div class="flex justify-between items-center">
-        <div>
-          <h3 class="text-lg font-semibold">{{ event.title }}</h3>
-          <div class="flex items-center gap-2 mt-1">
-            <UBadge :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'" size="sm">
-              {{ event.eventType === 'builders_skill_sprint' ? 'Builders Skill Sprint' : 'Virtual Event' }}
+  <UCard
+    class="w-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer overflow-hidden"
+    :class="isExpanded ? 'ring-2 ring-primary-500' : ''"
+  >
+    <UCardHeader @click="toggleExpand" class="cursor-pointer" :ui="{ base: 'p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors' }">
+      <div class="flex justify-between items-start gap-3">
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white line-clamp-2">{{ event.title }}</h3>
+          <div class="flex items-center gap-2 mt-2 flex-wrap">
+            <UBadge
+              :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
+              size="sm"
+              variant="subtle"
+            >
+              {{ event.eventType === 'builders_skill_sprint' ? 'Skill Sprint' : 'Virtual' }}
             </UBadge>
-            <p class="text-sm text-gray-500">{{ formatMonthYear(event.date) }}</p>
+            <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <UIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5" />
+              {{ formatMonthYear(event.date) }}
+            </span>
+            <span v-if="event.tags && event.tags.length > 0" class="text-xs text-gray-500 dark:text-gray-400">
+              {{ event.tags.length }} tag{{ event.tags.length !== 1 ? 's' : '' }}
+            </span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <UButton v-if="isAdmin" size="xs" :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
-            variant="ghost" icon="i-heroicons-pencil-square" @click.stop="handleEdit" class="mr-2" />
-          <UIcon :name="isExpanded ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="text-gray-500" />
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <UButton
+            v-if="isAdmin"
+            size="xs"
+            :color="event.eventType === 'builders_skill_sprint' ? 'primary' : 'info'"
+            variant="ghost"
+            icon="i-heroicons-pencil-square"
+            @click.stop="handleEdit"
+            :ui="{ base: 'hover:bg-gray-100 dark:hover:bg-gray-800' }"
+          />
+          <UIcon
+            :name="isExpanded ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+            class="text-gray-400 dark:text-gray-500 flex-shrink-0"
+          />
         </div>
       </div>
     </UCardHeader>

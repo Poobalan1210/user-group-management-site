@@ -124,46 +124,77 @@ const formHandlers = {
 </script>
 
 <template>
-  <UModal :open="isOpen" :close="true"  @update:open="handleClose" @close:prevent="handleClose">
+  <UModal :open="isOpen" :close="true" size="2xl" @update:open="handleClose" @close:prevent="handleClose">
     <template #title>
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">
-          Submit Challenge{{ eventTitle ? ` - ${eventTitle}` : '' }}
-        </h3>
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-primary-100 dark:bg-primary-950 rounded-lg">
+          <UIcon name="i-heroicons-document-check" class="text-primary-600 dark:text-primary-400" />
+        </div>
+        <div>
+          <h3 class="text-lg font-bold">Submit Challenge</h3>
+          <p v-if="eventTitle" class="text-sm text-gray-600 dark:text-gray-400">{{ eventTitle }}</p>
+        </div>
       </div>
     </template>
 
     <template #body>
-      <div class="p-6">
+      <div class="bg-white dark:bg-gray-950">
         <!-- Show form if schema is available -->
-        <div v-if="selectedSchema" class="space-y-4">
+        <div v-if="selectedSchema" class="p-6 space-y-6">
+          <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div class="flex gap-3">
+              <UIcon name="i-heroicons-information-circle" class="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 class="font-semibold text-blue-900 dark:text-blue-300">{{ selectedSchema.name }}</h4>
+                <p class="text-sm text-blue-800 dark:text-blue-400 mt-1">{{ selectedSchema.description }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Alert -->
+          <div v-if="uploadError" class="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div class="flex gap-3">
+              <UIcon name="i-heroicons-exclamation-circle" class="text-red-600 dark:text-red-400 flex-shrink-0" />
+              <p class="text-sm text-red-800 dark:text-red-300">{{ uploadError }}</p>
+            </div>
+          </div>
 
           <!-- FormKit Dynamic Form -->
-          <div class="formkit-form">
-            <div v-if="uploadError" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {{ uploadError }}
-            </div>
-            
-            <FormKit type="form" ref="formRef" v-model="formData" @submit="handleFormSubmit" >
-              <FormKitSchema :schema="selectedSchema.schema || []" :data="{ $handlers: formHandlers }"/>
-              <template #submit="{ attrs }">
-                <button v-bind="attrs" :disabled="isUploading">
-                  <UButton v-if="isUploading" :loading="isUploading">Uploading</UButton>
-                  <UButton v-else>Submit</UButton>
-                </button>
-              </template>
+          <div class="formkit-form max-h-96 overflow-y-auto pr-2">
+            <FormKit type="form" ref="formRef" v-model="formData" @submit="handleFormSubmit">
+              <FormKitSchema :schema="selectedSchema.schema || []" :data="{ $handlers: formHandlers }" />
             </FormKit>
           </div>
         </div>
 
         <!-- Show message if no schema is configured -->
-        <div v-else class="text-center py-8">
-          <UIcon name="i-heroicons-document-text" class="text-4xl text-gray-400 mx-auto mb-4" />
-          <h4 class="text-lg font-medium mb-2">No Form Configured</h4>
+        <div v-else class="text-center py-12 px-6">
+          <div class="bg-gray-100 dark:bg-gray-800 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <UIcon name="i-heroicons-document-text" class="text-3xl text-gray-400" />
+          </div>
+          <h4 class="text-lg font-semibold mb-2">No Form Configured</h4>
           <p class="text-gray-600 dark:text-gray-400">
             The event organizer hasn't configured a submission form for this event yet.
           </p>
         </div>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="flex justify-end gap-2 p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+        <UButton variant="outline" color="gray" @click="handleClose">
+          Cancel
+        </UButton>
+        <UButton
+          v-if="selectedSchema"
+          :loading="isUploading"
+          :disabled="isUploading"
+          type="button"
+          @click="() => formRef?.node?.submit()"
+        >
+          <UIcon name="i-heroicons-check" class="mr-2" />
+          {{ isUploading ? 'Submitting...' : 'Submit Challenge' }}
+        </UButton>
       </div>
     </template>
   </UModal>
