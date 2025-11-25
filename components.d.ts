@@ -28,7 +28,7 @@ declare module 'vue' {
     SignupForm: typeof import('./src/components/SignupForm.vue')['default']
     StatsCards: typeof import('./src/components/StatsCards.vue')['default']
     UAlert: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Alert.vue')['default']
-    UApp: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/App.vue')['default']
+    UApp: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/App.vue')['default']
     UAvatar: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Avatar.vue')['default']
     UBadge: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Badge.vue')['default']
     UButton: typeof import('./node_modules/.pnpm/@nuxt+ui@3.1.3_@babel+parser@7.27.5_axios@1.10.0_db0@0.3.2_embla-carousel@8.6.0_ioredis_d713be22aff4b7dc44c37386e43058bd/node_modules/@nuxt/ui/dist/runtime/components/Button.vue')['default']
